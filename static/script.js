@@ -9,6 +9,7 @@ let selectedPlaylist = null;
 let isShuffling = false;
 let isRepeating = false;
 let originalQueue = [];
+let history = {}; // Tracks song play counts { songId: count }
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
@@ -22,6 +23,7 @@ function initAudioPlayer() {
         } else {
             stopPlayer();
         }
+        updateHistory();
     });
     audioPlayer.addEventListener('error', (e) => {
         console.error("Audio playback error:", e);
@@ -31,6 +33,7 @@ function initAudioPlayer() {
     audioPlayer.addEventListener('loadeddata', () => {
         console.log("Audio loadeddata event");
         audioPlayer.play();
+        updateHistory();
         updatePlayerUI();
     });
     audioPlayer.addEventListener('timeupdate', updateProgress);
@@ -196,17 +199,14 @@ function randomInt(min, max) {
 function smartShuffle(songs, currentSong = null) {
     console.log("smartShuffle called with songs:", songs, "currentSong:", currentSong);
     
-    // If songs is empty, return an empty array
     if (songs.length === 0) {
         console.log("Songs array is empty, returning empty array");
         return [];
     }
 
-    // Separate current song if provided
     let remainingSongs = songs.filter(song => song !== currentSong);
     console.log("Remaining songs after filtering currentSong:", remainingSongs);
 
-    // Group songs by artist using a Map
     const artistGroups = new Map();
     for (let song of remainingSongs) {
         if (!artistGroups.has(song.artist)) {
@@ -216,36 +216,29 @@ function smartShuffle(songs, currentSong = null) {
     }
     console.log("Artist groups:", Array.from(artistGroups.entries()));
 
-    // Initialize shuffled array and list of artists
     let shuffled = [];
     let artistList = Array.from(artistGroups.keys());
     console.log("Initial artist list:", artistList);
 
-    // Shuffle songs while avoiding artist repetition
     while (artistList.length > 0) {
-        // Randomly select an artist
         const artistIndex = randomInt(0, artistList.length - 1);
         const selectedArtist = artistList[artistIndex];
         console.log("Selected artist:", selectedArtist);
 
-        // Take a random song from this artist
         const artistSongs = artistGroups.get(selectedArtist);
         const songIndex = randomInt(0, artistSongs.length - 1);
         shuffled.push(artistSongs[songIndex]);
         console.log("Added song to shuffled:", artistSongs[songIndex]);
 
-        // Remove the song from the artist's group
         artistSongs.splice(songIndex, 1);
         console.log("Remaining songs for artist", selectedArtist, ":", artistSongs);
 
-        // Remove artist from the list if they have no more songs
         if (artistSongs.length === 0) {
             artistList.splice(artistIndex, 1);
             console.log("Artist", selectedArtist, "has no more songs. Updated artist list:", artistList);
         }
     }
 
-    // Add current song back at the beginning if provided
     if (currentSong) {
         shuffled.unshift(currentSong);
         console.log("Added currentSong to the beginning of shuffled:", currentSong);
@@ -253,6 +246,85 @@ function smartShuffle(songs, currentSong = null) {
 
     console.log("Final shuffled array:", shuffled);
     return shuffled;
+}
+
+// Helper function to shuffle an array using Fisher-Yates algorithm
+function shuffle(array) {
+    console.log("Shuffling array:", array);
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = randomInt(0, i);
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    console.log("Shuffled array:", array);
+    return array;
+}
+
+// Helper function to get top N frequently played playlists from history
+function getTopPlaylists(history, count = 2) {
+    console.log("Getting top playlists from history:", history);
+    const playlistCounts = {};
+    for (let songId in history) {
+        const song = allSongs.find(s => s.id === parseInt(songId));
+        if (song && song.playlist) {
+            playlistCounts[song.playlist] = (playlistCounts[song.playlist] || 0) + history[songId];
+        }
+    }
+    console.log("Playlist counts:", playlistCounts);
+
+    const sortedPlaylists = Object.entries(playlistCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, count)
+        .map(entry => entry[0]);
+    console.log("Top", count, "playlists:", sortedPlaylists);
+    return sortedPlaylists;
+}
+
+// Function to update listening history when a song plays
+function updateHistory() {
+    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
+        const songId = songQueue[currentSongIndex].id;
+        history[songId] = (history[songId] || 0) + 1;
+        console.log("Updated history:", history);
+    }
+}
+
+// Function to recommend songs based on current song and history
+function recommendSongs(currentSong, allSongs, history, count = 5) {
+    console.log("Recommending songs for currentSong:", currentSong, "count:", count);
+
+    // Get similar songs from the same artist
+    const sameArtist = allSongs.filter(song =>
+        song.artist === currentSong.artist && song.id !== currentSong.id
+    );
+    console.log("Songs from same artist:", sameArtist);
+
+    // Get songs from frequently played playlists
+    const frequentPlaylists = getTopPlaylists(history, 2);
+    const playlistSongs = allSongs.filter(song =>
+        frequentPlaylists.includes(song.playlist) && song.id !== currentSong.id
+    );
+    console.log("Songs from frequent playlists:", playlistSongs);
+
+    // Combine and deduplicate using a Set
+    let recommendations = new Set([...sameArtist, ...playlistSongs]);
+    console.log("Initial recommendations:", Array.from(recommendations));
+
+    // Fallback to random if not enough
+    if (recommendations.size < count) {
+        const remaining = allSongs.filter(song =>
+            !recommendations.has(song) && song.id !== currentSong.id
+        );
+        console.log("Remaining songs for random selection:", remaining);
+        shuffle(remaining);
+        const additionalSongs = remaining.slice(0, count - recommendations.size);
+        console.log("Additional random songs:", additionalSongs);
+        additionalSongs.forEach(song => recommendations.add(song));
+    }
+
+    // Return the requested number of recommendations
+    const result = Array.from(recommendations).slice(0, count);
+    console.log("Final recommendations:", result);
+    return result;
 }
 
 function playPlaylist(playlistName) {
@@ -292,17 +364,14 @@ function renderQueue() {
 
 function clearQueue() {
     console.log("clearQueue called");
-    // Preserve the current song if one is playing
     let currentSong = null;
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         currentSong = songQueue[currentSongIndex];
     }
 
-    // Clear the queue and original queue
     songQueue = [];
     originalQueue = [];
 
-    // If a song is currently playing, add it back as the only song in the queue
     if (currentSong) {
         songQueue = [currentSong];
         originalQueue = [currentSong];
@@ -311,7 +380,6 @@ function clearQueue() {
         currentSongIndex = -1;
     }
 
-    // Update the UI
     renderQueue();
     updatePlayerUI();
     console.log("Queue cleared. Current song:", currentSong, "Queue:", songQueue);
@@ -705,6 +773,27 @@ function search() {
         .catch(error => console.error("Error searching:", error));
 }
 
+function showRecommendations() {
+    console.log("showRecommendations called");
+    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
+        const currentSong = songQueue[currentSongIndex];
+        const recommendations = recommendSongs(currentSong, allSongs, history);
+        const queueList = document.getElementById('queue-list');
+        queueList.innerHTML = '<h3>Recommendations</h3>';
+        recommendations.forEach((song, index) => {
+            const queueItem = document.createElement('div');
+            queueItem.className = 'queue-item';
+            queueItem.innerHTML = `
+                <span>${song.title} - ${song.artist}</span>
+                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
+            `;
+            queueList.appendChild(queueItem);
+        });
+    } else {
+        alert("No song is currently playing to base recommendations on.");
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
     initAudioPlayer();
@@ -725,6 +814,14 @@ document.addEventListener('DOMContentLoaded', () => {
             search();
         }
     });
+
+    // Add recommendation button to player controls
+    const controls = document.querySelector('.controls');
+    const recommendBtn = document.createElement('button');
+    recommendBtn.id = 'recommend-btn';
+    recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+    recommendBtn.onclick = showRecommendations;
+    controls.appendChild(recommendBtn);
 });
 
 console.log("Script loaded - End of file");
