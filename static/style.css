@@ -16,17 +16,33 @@ body {
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
-/* Player Controls */
+/* Player Controls and Resize Handle */
 .player-controls {
     background-color: #1e1e1e;
     border-top: 1px solid #333;
     box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.3);
+    height: 120px; /* Default height */
+    transition: height 0.3s ease;
 }
 
 .player-controls.active {
     display: block;
 }
 
+#player-resize-handle {
+    width: 100%;
+    height: 5px;
+    background: #444;
+    cursor: ns-resize;
+    border-top: 1px solid #333;
+    border-bottom: 1px solid #333;
+}
+
+#player-resize-handle:hover {
+    background: #666;
+}
+
+/* Controls */
 .controls button {
     background: none;
     border: none;

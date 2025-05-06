@@ -122,7 +122,7 @@ function playPrevious() {
         audioPlayer.load();
         updatePlayerUI();
         renderQueue();
-        console.log("Previous song:", prevSong, "Index:", currentSongIndex);
+        console.log("Previous song:", prevSong, "Index:", currentSongIndex");
     }
 }
 
@@ -821,18 +821,18 @@ document.addEventListener('DOMContentLoaded', () => {
     controls.appendChild(recommendBtn);
 
     // Queue resizing logic
-    const resizeHandle = document.getElementById('queue-resize-handle');
+    const queueResizeHandle = document.getElementById('queue-resize-handle');
     const queueCollapse = document.getElementById('queueCollapse');
-    let isDragging = false;
+    let isQueueDragging = false;
 
-    resizeHandle.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
+    queueResizeHandle.addEventListener('mousedown', (e) => {
+        isQueueDragging = true;
+        document.addEventListener('mousemove', onQueueMouseMove);
+        document.addEventListener('mouseup', onQueueMouseUp);
     });
 
-    function onMouseMove(e) {
-        if (!isDragging) return;
+    function onQueueMouseMove(e) {
+        if (!isQueueDragging) return;
         const playerControls = document.querySelector('.player-controls');
         const playerRect = playerControls.getBoundingClientRect();
         const newHeight = window.innerHeight - e.clientY - playerRect.height + queueCollapse.scrollHeight;
@@ -841,10 +841,35 @@ document.addEventListener('DOMContentLoaded', () => {
         queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
     }
 
-    function onMouseUp() {
-        isDragging = false;
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
+    function onQueueMouseUp() {
+        isQueueDragging = false;
+        document.removeEventListener('mousemove', onQueueMouseMove);
+        document.removeEventListener('mouseup', onQueueMouseUp);
+    }
+
+    // Player resizing logic
+    const playerResizeHandle = document.getElementById('player-resize-handle');
+    const playerControls = document.querySelector('.player-controls');
+    let isPlayerDragging = false;
+
+    playerResizeHandle.addEventListener('mousedown', (e) => {
+        isPlayerDragging = true;
+        document.addEventListener('mousemove', onPlayerMouseMove);
+        document.addEventListener('mouseup', onPlayerMouseUp);
+    });
+
+    function onPlayerMouseMove(e) {
+        if (!isPlayerDragging) return;
+        const newHeight = window.innerHeight - e.clientY;
+        const minHeight = 80; // Minimum height
+        const maxHeight = 300; // Maximum height
+        playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+    }
+
+    function onPlayerMouseUp() {
+        isPlayerDragging = false;
+        document.removeEventListener('mousemove', onPlayerMouseMove);
+        document.removeEventListener('mouseup', onPlayerMouseUp);
     }
 });
 
