@@ -10,6 +10,7 @@ let isShuffling = false;
 let isRepeating = false;
 let originalQueue = [];
 let history = {}; // Tracks song play counts { songId: count }
+let audioCache = new Map(); // Cache for preloaded audio data
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
@@ -58,8 +59,8 @@ function formatTime(seconds) {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
-async function playSong(songId) {
-    console.log("playSong called with songId:", songId);
+async function playSongWithCache(songId) {
+    console.log("playSongWithCache called with songId:", songId);
     const song = allSongs.find(s => s.id === parseInt(songId));
     if (!song) {
         console.log("Song not found for songId:", songId);
@@ -74,8 +75,28 @@ async function playSong(songId) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
     }
-    audioPlayer.src = song.url;
-    audioPlayer.load();
+
+    if (audioCache.has(songId)) {
+        console.log("Using cached audio for songId:", songId);
+        audioPlayer.src = audioCache.get(songId);
+        audioPlayer.play();
+    } else {
+        console.log("Fetching and caching audio for songId:", songId);
+        try {
+            const audioData = await fetchSong(songId);
+            audioCache.set(songId, audioData);
+            audioPlayer.src = audioData;
+            audioPlayer.play();
+
+            // Preload next 2 songs in queue
+            preloadNextSongs(2);
+        } catch (error) {
+            console.error("Error fetching song:", error);
+            document.getElementById('player-info').innerHTML = 'Error loading song, skipping...';
+            playNext();
+        }
+    }
+
     updatePlayerUI();
     renderQueue();
     console.log("Playing song:", song, "Queue:", songQueue, "Index:", currentSongIndex);
@@ -90,8 +111,7 @@ function addToQueue(songId) {
         songQueue = [song];
         originalQueue = [song];
         currentSongIndex = 0;
-        audioPlayer.src = song.url;
-        audioPlayer.load();
+        playSongWithCache(song.id);
     } else {
         songQueue.push(song);
         originalQueue.push(song);
@@ -106,10 +126,7 @@ function playNext() {
     currentSongIndex++;
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
-        audioPlayer.src = nextSong.url;
-        audioPlayer.load();
-        updatePlayerUI();
-        renderQueue();
+        playSongWithCache(nextSong.id);
         console.log("Next song:", nextSong, "Index:", currentSongIndex);
     } else {
         stopPlayer();
@@ -122,10 +139,7 @@ function playPrevious() {
     currentSongIndex--;
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
-        audioPlayer.src = prevSong.url;
-        audioPlayer.load();
-        updatePlayerUI();
-        renderQueue();
+        playSongWithCache(prevSong.id);
         console.log("Previous song:", prevSong, "Index:", currentSongIndex);
     }
 }
@@ -292,24 +306,20 @@ function updateHistory() {
 function recommendSongs(currentSong, allSongs, history, count = 5) {
     console.log("Recommending songs for currentSong:", currentSong, "count:", count);
 
-    // Get similar songs from the same artist
     const sameArtist = allSongs.filter(song =>
         song.artist === currentSong.artist && song.id !== currentSong.id
     );
     console.log("Songs from same artist:", sameArtist);
 
-    // Get songs from frequently played playlists
     const frequentPlaylists = getTopPlaylists(history, 2);
     const playlistSongs = allSongs.filter(song =>
         frequentPlaylists.includes(song.playlist) && song.id !== currentSong.id
     );
     console.log("Songs from frequent playlists:", playlistSongs);
 
-    // Combine and deduplicate using a Set
     let recommendations = new Set([...sameArtist, ...playlistSongs]);
     console.log("Initial recommendations:", Array.from(recommendations));
 
-    // Fallback to random if not enough
     if (recommendations.size < count) {
         const remaining = allSongs.filter(song =>
             !recommendations.has(song) && song.id !== currentSong.id
@@ -321,7 +331,6 @@ function recommendSongs(currentSong, allSongs, history, count = 5) {
         additionalSongs.forEach(song => recommendations.add(song));
     }
 
-    // Return the requested number of recommendations
     const result = Array.from(recommendations).slice(0, count);
     console.log("Final recommendations:", result);
     return result;
@@ -355,7 +364,7 @@ function renderQueue() {
             queueItem.className = 'queue-item';
             queueItem.innerHTML = `
                 <span ${index === currentSongIndex ? 'style="font-weight: bold; color: #1db954;"' : ''}>${song.title} - ${song.artist}</span>
-                <button onclick="playSong(${song.id})"><i class="fas fa-play"></i></button>
+                <button onclick="playSongWithCache(${song.id})"><i class="fas fa-play"></i></button>
             `;
             queueList.appendChild(queueItem);
         });
@@ -503,7 +512,7 @@ function showPlaylistSongs(playlistName) {
             songItem.dataset.id = song.id;
             songItem.dataset.songId = song.id;
             songItem.innerHTML = `
-                <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
+                <span onclick="playSongWithCache(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
                 <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                 <button onclick="playPlaylist('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-list-play"></i></button>
                 <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
@@ -743,7 +752,7 @@ function search() {
                     const item = document.createElement('div');
                     item.className = 'song-item';
                     item.innerHTML = `
-                        <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist} (${song.playlist})</span>
+                        <span onclick="playSongWithCache(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist} (${song.playlist})</span>
                         <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                     `;
                     songList.appendChild(item);
@@ -792,6 +801,32 @@ function showRecommendations() {
     } else {
         alert("No song is currently playing to base recommendations on.");
     }
+}
+
+function preloadNextSongs(count) {
+    console.log("preloadNextSongs called with count:", count);
+    const nextIndex = currentSongIndex + 1;
+    const endIndex = Math.min(nextIndex + count, songQueue.length - 1);
+    for (let i = nextIndex; i <= endIndex; i++) {
+        const song = songQueue[i];
+        if (song && !audioCache.has(song.id)) {
+            console.log("Preloading song:", song.id);
+            fetchSong(song.id).then(audioData => {
+                audioCache.set(song.id, audioData);
+                console.log("Cached preloaded song:", song.id);
+            }).catch(error => console.error("Error preloading song:", error));
+        }
+    }
+}
+
+function fetchSong(songId) {
+    console.log("fetchSong called with songId:", songId);
+    return fetch(`/song/${songId}`)
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.blob();
+        })
+        .then(blob => URL.createObjectURL(blob));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
