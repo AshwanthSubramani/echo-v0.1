@@ -7,13 +7,11 @@ let allSongs = [];
 let playlists = [];
 let selectedPlaylist = null;
 let isShuffling = false;
-let isRepeating = false;
 let originalQueue = [];
 let history = {};
 let audioCache = new Map();
 let searchIndex = null;
 
-// Trie class for efficient title search
 class Trie {
     constructor() {
         this.root = {};
@@ -60,22 +58,17 @@ function buildSearchIndex(songs) {
     const playlistIndex = new Map();
 
     songs.forEach((song, index) => {
-        // Use index as songId for mapping (since song.id might not match array index after deletions)
         const songId = index;
-
-        // Insert into trie for title search
         const words = song.title.split(' ').filter(word => word);
         for (let word of words) {
             trie.insert(word.toLowerCase(), songId);
         }
 
-        // Build artist index
         if (!artistIndex.has(song.artist)) {
             artistIndex.set(song.artist, []);
         }
         artistIndex.get(song.artist).push(songId);
 
-        // Build playlist index
         if (!playlistIndex.has(song.playlist)) {
             playlistIndex.set(song.playlist, []);
         }
@@ -91,7 +84,6 @@ function fastSearch(query, index, allSongs) {
     query = query.toLowerCase();
     const results = new Set();
 
-    // Check if query matches an artist name
     if (index.artistIndex.has(query)) {
         const songIds = index.artistIndex.get(query);
         console.log("Artist match for query:", query, "Song IDs:", songIds);
@@ -100,7 +92,6 @@ function fastSearch(query, index, allSongs) {
         }
     }
 
-    // Check if query matches a playlist name
     if (index.playlistIndex.has(query)) {
         const songIds = index.playlistIndex.get(query);
         console.log("Playlist match for query:", query, "Song IDs:", songIds);
@@ -109,7 +100,6 @@ function fastSearch(query, index, allSongs) {
         }
     }
 
-    // Search in trie for title words
     const words = query.split(' ').filter(word => word);
     for (let word of words) {
         const songIds = index.trie.search(word);
@@ -130,9 +120,6 @@ function initAudioPlayer() {
     audioPlayer.addEventListener('ended', () => {
         if (songQueue.length > 0 && currentSongIndex + 1 < songQueue.length) {
             playNext();
-        } else if (isRepeating) {
-            audioPlayer.currentTime = 0;
-            audioPlayer.play();
         } else {
             stopPlayer();
         }
@@ -308,14 +295,6 @@ function toggleShuffle() {
     console.log("Shuffle toggled:", isShuffling, "Queue:", songQueue);
 }
 
-function toggleRepeat() {
-    console.log("toggleRepeat called");
-    isRepeating = !isRepeating;
-    const repeatBtn = document.getElementById('repeat-btn');
-    repeatBtn.classList.toggle('active', isRepeating);
-    console.log("Repeat toggled:", isRepeating);
-}
-
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -460,17 +439,17 @@ function playPlaylist(playlistName) {
 function renderQueue() {
     console.log("renderQueue called");
     const queueList = document.getElementById('queue-list');
-    queueList.innerHTML = '<h3>Queue</h3>';
+    queueList.innerHTML = '<h3 class="text-lg font-semibold mb-2">Queue</h3>';
     if (songQueue.length === 0) {
-        queueList.innerHTML += '<p>No songs in queue.</p>';
+        queueList.innerHTML += '<p class="text-gray-400">No songs in queue.</p>';
     } else {
-        queueList.innerHTML += '<button onclick="clearQueue()" class="clear-queue-btn">Clear Queue</button>';
+        queueList.innerHTML += '<button onclick="clearQueue()" class="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded mb-2">Clear Queue</button>';
         songQueue.forEach((song, index) => {
             const queueItem = document.createElement('div');
-            queueItem.className = 'queue-item';
+            queueItem.className = 'queue-item flex justify-between items-center p-2 bg-gray-800 rounded';
             queueItem.innerHTML = `
-                <span ${index === currentSongIndex ? 'style="font-weight: bold; color: #1db954;"' : ''}>${song.title} - ${song.artist}</span>
-                <button onclick="playSongWithCache(${song.id})"><i class="fas fa-play"></i></button>
+                <span class="${index === currentSongIndex ? 'font-bold text-green-500' : ''}">${song.title} - ${song.artist}</span>
+                <button onclick="playSongWithCache(${song.id})" class="text-green-500 hover:text-green-400"><i class="fas fa-play"></i></button>
             `;
             queueList.appendChild(queueItem);
         });
@@ -511,14 +490,12 @@ function showEditPlaylistPopup(playlistId, playlistName) {
 
     const popup = document.createElement('div');
     popup.id = 'edit-playlist-popup';
-    popup.className = 'edit-playlist-popup';
+    popup.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-800 p-6 rounded-lg shadow-lg z-50';
     popup.innerHTML = `
-        <div class="popup-content">
-            <h3>Edit Playlist</h3>
-            <button onclick="updatePlaylistImage(${playlistId})">Change Image</button>
-            <button onclick="renamePlaylist(${playlistId}, '${playlistName.replace(/'/g, "\\'")}')">Rename Playlist</button>
-            <button onclick="document.getElementById('edit-playlist-popup').remove()">Cancel</button>
-        </div>
+        <h3 class="text-xl font-semibold mb-4">Edit Playlist</h3>
+        <button onclick="updatePlaylistImage(${playlistId})" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded mb-2">Change Image</button>
+        <button onclick="renamePlaylist(${playlistId}, '${playlistName.replace(/'/g, "\\'")}')" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded mb-2">Rename Playlist</button>
+        <button onclick="document.getElementById('edit-playlist-popup').remove()" class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded">Cancel</button>
     `;
     document.body.appendChild(popup);
 }
@@ -603,30 +580,31 @@ function showPlaylistSongs(playlistName) {
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
     const songList = document.getElementById('song-list');
     songList.innerHTML = `
-        <div class="playlist-header">
-            <button onclick="showMainPage()" class="back-btn"><i class="fas fa-arrow-left"></i></button>
-            <h2>Songs in ${playlistName}</h2>
-            <button onclick="deletePlaylist(${playlists.find(p => p.name === playlistName).id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+        <div class="flex items-center mb-4">
+            <button onclick="showMainPage()" class="back-btn bg-gray-600 hover:bg-gray-700 text-white py-1 px-3 rounded mr-2"><i class="fas fa-arrow-left"></i></button>
+            <h2 class="text-2xl font-bold">Songs in ${playlistName}</h2>
+            <button onclick="deletePlaylist(${playlists.find(p => p.name === playlistName).id})" class="ml-auto bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded"><i class="fas fa-trash"></i></button>
         </div>
-        <ul id="sortable-songs" class="sortable">`;
+        <ul id="sortable-songs" class="space-y-2"></ul>`;
     if (playlistSongs.length === 0) {
-        songList.innerHTML += '<p>No songs found in this playlist.</p>';
+        songList.innerHTML += '<p class="text-gray-400">No songs found in this playlist.</p>';
     } else {
         playlistSongs.forEach(song => {
             const songItem = document.createElement('li');
-            songItem.className = 'song-item';
+            songItem.className = 'song-item flex justify-between items-center p-2 bg-gray-800 rounded';
             songItem.dataset.id = song.id;
             songItem.dataset.songId = song.id;
             songItem.innerHTML = `
-                <span onclick="playSongWithCache(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
-                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
-                <button onclick="playPlaylist('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-list-play"></i></button>
-                <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+                <span onclick="playSongWithCache(${song.id})" class="cursor-pointer hover:text-green-500">${song.title} - ${song.artist}</span>
+                <div class="space-x-2">
+                    <button onclick="addToQueue(${song.id})" class="text-green-500 hover:text-green-400"><i class="fas fa-plus"></i></button>
+                    <button onclick="playPlaylist('${playlistName.replace(/'/g, "\\'")}')" class="text-green-500 hover:text-green-400"><i class="fas fa-list-play"></i></button>
+                    <button onclick="deleteSong(${song.id})" class="text-red-500 hover:text-red-400"><i class="fas fa-trash"></i></button>
+                </div>
             `;
             songList.querySelector('#sortable-songs').appendChild(songItem);
         });
     }
-    songList.innerHTML += '</ul>';
     makeSortable();
 }
 
@@ -759,10 +737,10 @@ function updatePlayerUI() {
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const currentSong = songQueue[currentSongIndex];
         console.log("Current song:", currentSong);
-        playerInfo.innerHTML = `${currentSong.title} - ${song.artist}`;
+        playerInfo.textContent = `${currentSong.title} - ${currentSong.artist}`;
         playerControls.classList.add('active');
     } else {
-        playerInfo.innerHTML = 'Select a song to play';
+        playerInfo.textContent = 'Select a song to play';
         playerControls.classList.remove('active');
     }
 }
@@ -776,17 +754,17 @@ function renderPlaylists() {
             console.log("Playlists:", playlists);
             const playlistContainer = document.getElementById('playlists');
             playlistContainer.innerHTML = `
-                <h2>Playlists</h2>
+                <h2 class="text-2xl font-bold mb-4">Playlists</h2>
                 <div class="add-playlist">
-                    <input type="text" id="new-playlist-name" placeholder="New Playlist">
-                    <button onclick="createPlaylist()"><i class="fas fa-plus"></i></button>
+                    <input type="text" id="new-playlist-name" placeholder="New Playlist" class="w-full p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 mb-2">
+                    <button onclick="createPlaylist()" class="w-full bg-green-600 hover:bg-green-700 p-2 rounded text-white font-semibold transition-colors"><i class="fas fa-plus"></i> Add</button>
                 </div>`;
             playlists.forEach(playlist => {
                 const playlistDiv = document.createElement('div');
-                playlistDiv.className = 'playlist-item';
+                playlistDiv.className = 'playlist-item flex items-center gap-2 p-2 bg-gray-800 rounded cursor-pointer hover:bg-gray-700';
                 playlistDiv.innerHTML = `
-                    <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
-                    <button class="playlist-name" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">${playlist.name}</button>
+                    <img src="${playlist.image}" alt="${playlist.name}" class="w-10 h-10 object-cover rounded" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
+                    <button class="playlist-name flex-1 text-left text-white hover:text-green-500" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">${playlist.name}</button>
                 `;
                 playlistContainer.appendChild(playlistDiv);
             });
@@ -810,12 +788,14 @@ function showMainPage() {
     selectedPlaylist = null;
     const songList = document.getElementById('song-list');
     songList.innerHTML = `
-        <h2>Songs</h2>
-        <p>Select a playlist to view songs.</p>
-        <div class="add-song">
-            <input type="text" id="youtube-url" placeholder="YouTube URL">
-            <select id="playlist-select"></select>
-            <button onclick="addSongFromUrl(document.getElementById('youtube-url').value, document.getElementById('playlist-select').value)"><i class="fas fa-download"></i></button>
+        <h2 class="text-2xl font-bold mb-4">Songs</h2>
+        <p class="text-gray-400 mb-4">Select a playlist to view songs.</p>
+        <div class="add-song flex space-x-2">
+            <input type="text" id="youtube-url" placeholder="YouTube URL" class="flex-1 p-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500">
+            <select id="playlist-select" class="p-2 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                <option value="">Select Playlist</option>
+            </select>
+            <button onclick="addSongFromUrl(document.getElementById('youtube-url').value, document.getElementById('playlist-select').value)" class="bg-green-600 hover:bg-green-700 p-2 rounded text-white"><i class="fas fa-download"></i></button>
         </div>`;
     renderPlaylists();
 }
@@ -834,19 +814,19 @@ function search() {
         .then(response => response.json())
         .then(youtubeData => {
             const songList = document.getElementById('song-list');
-            songList.innerHTML = '<h2>Search Results</h2>';
+            songList.innerHTML = '<h2 class="text-2xl font-bold mb-4">Search Results</h2>';
 
             if (playlists.length > 0) {
                 const matchingPlaylists = playlists.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
                 if (matchingPlaylists.length > 0) {
-                    songList.innerHTML += '<h3>Playlists</h3>';
+                    songList.innerHTML += '<h3 class="text-xl font-semibold mb-2">Playlists</h3>';
                     matchingPlaylists.forEach(playlist => {
                         const item = document.createElement('div');
-                        item.className = 'song-item';
+                        item.className = 'song-item flex items-center gap-2 p-2 bg-gray-800 rounded cursor-pointer hover:bg-gray-700';
                         item.innerHTML = `
-                            <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
-                            <span>${playlist.name}</span>
-                            <button onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')"><i class="fas fa-folder"></i></button>
+                            <img src="${playlist.image}" alt="${playlist.name}" class="w-10 h-10 object-cover rounded" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
+                            <span class="flex-1">${playlist.name}</span>
+                            <button onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')" class="text-green-500 hover:text-green-400"><i class="fas fa-folder"></i></button>
                         `;
                         songList.appendChild(item);
                     });
@@ -854,26 +834,26 @@ function search() {
             }
 
             if (matchingSongs.length > 0) {
-                songList.innerHTML += '<h3>Local Songs</h3>';
+                songList.innerHTML += '<h3 class="text-xl font-semibold mb-2">Local Songs</h3>';
                 matchingSongs.forEach(song => {
                     const item = document.createElement('div');
-                    item.className = 'song-item';
+                    item.className = 'song-item flex justify-between items-center p-2 bg-gray-800 rounded';
                     item.innerHTML = `
-                        <span onclick="playSongWithCache(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist} (${song.playlist})</span>
-                        <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
+                        <span onclick="playSongWithCache(${song.id})" class="cursor-pointer hover:text-green-500">${song.title} - ${song.artist} (${song.playlist})</span>
+                        <button onclick="addToQueue(${song.id})" class="text-green-500 hover:text-green-400"><i class="fas fa-plus"></i></button>
                     `;
                     songList.appendChild(item);
                 });
             }
 
             if (youtubeData.results.length > 0) {
-                songList.innerHTML += '<h3>YouTube Results</h3>';
+                songList.innerHTML += '<h3 class="text-xl font-semibold mb-2">YouTube Results</h3>';
                 youtubeData.results.forEach(video => {
                     const item = document.createElement('div');
-                    item.className = 'song-item';
+                    item.className = 'song-item flex justify-between items-center p-2 bg-gray-800 rounded';
                     item.innerHTML = `
                         <span>${video.title} - ${video.artist}</span>
-                        <select class="youtube-playlist-select" onchange="addSongFromUrl('${video.url}', this.value)">
+                        <select class="youtube-playlist-select p-1 bg-gray-700 text-white rounded" onchange="addSongFromUrl('${video.url}', this.value)">
                             <option value="">Add to Playlist</option>
                             ${playlists.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
                         </select>
@@ -883,7 +863,7 @@ function search() {
             }
 
             if (matchingSongs.length === 0 && youtubeData.results.length === 0) {
-                songList.innerHTML += '<p>No results found.</p>';
+                songList.innerHTML += '<p class="text-gray-400">No results found.</p>';
             }
         })
         .catch(error => console.error("Error searching:", error));
@@ -895,13 +875,13 @@ function showRecommendations() {
         const currentSong = songQueue[currentSongIndex];
         const recommendations = recommendSongs(currentSong, allSongs, history);
         const queueList = document.getElementById('queue-list');
-        queueList.innerHTML = '<h3>Recommendations</h3>';
+        queueList.innerHTML = '<h3 class="text-lg font-semibold mb-2">Recommendations</h3>';
         recommendations.forEach((song, index) => {
             const queueItem = document.createElement('div');
-            queueItem.className = 'queue-item';
+            queueItem.className = 'queue-item flex justify-between items-center p-2 bg-gray-800 rounded';
             queueItem.innerHTML = `
                 <span>${song.title} - ${song.artist}</span>
-                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
+                <button onclick="addToQueue(${song.id})" class="text-green-500 hover:text-green-400"><i class="fas fa-plus"></i></button>
             `;
             queueList.appendChild(queueItem);
         });
@@ -956,13 +936,4 @@ document.addEventListener('DOMContentLoaded', () => {
             search();
         }
     });
-
-    const controls = document.querySelector('.controls');
-    const recommendBtn = document.createElement('button');
-    recommendBtn.id = 'recommend-btn';
-    recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
-    recommendBtn.onclick = showRecommendations;
-    controls.appendChild(recommendBtn);
 });
-
-console.log("Script loaded - End of file");
