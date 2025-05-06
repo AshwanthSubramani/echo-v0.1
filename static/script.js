@@ -188,38 +188,71 @@ function toggleRepeat() {
     console.log("Repeat toggled:", isRepeating);
 }
 
-function smartShuffle(songs, currentSong) {
-    let shuffled = [...songs];
-    if (currentSong) {
-        shuffled = shuffled.filter(s => s.id !== currentSong.id);
-    }
+// Helper function to generate a random integer between min and max (inclusive)
+function randomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function smartShuffle(songs, currentSong = null) {
+    console.log("smartShuffle called with songs:", songs, "currentSong:", currentSong);
     
-    const artistGroups = {};
-    shuffled.forEach(song => {
-        if (!artistGroups[song.artist]) artistGroups[song.artist] = [];
-        artistGroups[song.artist].push(song);
-    });
+    // If songs is empty, return an empty array
+    if (songs.length === 0) {
+        console.log("Songs array is empty, returning empty array");
+        return [];
+    }
 
-    const result = [];
-    const artists = Object.keys(artistGroups);
-    while (shuffled.length > 0) {
-        const artistIndex = Math.floor(Math.random() * artists.length);
-        const artist = artists[artistIndex];
-        if (artistGroups[artist].length > 0) {
-            const songIndex = Math.floor(Math.random() * artistGroups[artist].length);
-            result.push(artistGroups[artist][songIndex]);
-            artistGroups[artist].splice(songIndex, 1);
-            shuffled = shuffled.filter(s => s.id !== result[result.length - 1].id);
+    // Separate current song if provided
+    let remainingSongs = songs.filter(song => song !== currentSong);
+    console.log("Remaining songs after filtering currentSong:", remainingSongs);
+
+    // Group songs by artist using a Map
+    const artistGroups = new Map();
+    for (let song of remainingSongs) {
+        if (!artistGroups.has(song.artist)) {
+            artistGroups.set(song.artist, []);
         }
-        if (artistGroups[artist].length === 0) {
-            artists.splice(artistIndex, 1);
+        artistGroups.get(song.artist).push(song);
+    }
+    console.log("Artist groups:", Array.from(artistGroups.entries()));
+
+    // Initialize shuffled array and list of artists
+    let shuffled = [];
+    let artistList = Array.from(artistGroups.keys());
+    console.log("Initial artist list:", artistList);
+
+    // Shuffle songs while avoiding artist repetition
+    while (artistList.length > 0) {
+        // Randomly select an artist
+        const artistIndex = randomInt(0, artistList.length - 1);
+        const selectedArtist = artistList[artistIndex];
+        console.log("Selected artist:", selectedArtist);
+
+        // Take a random song from this artist
+        const artistSongs = artistGroups.get(selectedArtist);
+        const songIndex = randomInt(0, artistSongs.length - 1);
+        shuffled.push(artistSongs[songIndex]);
+        console.log("Added song to shuffled:", artistSongs[songIndex]);
+
+        // Remove the song from the artist's group
+        artistSongs.splice(songIndex, 1);
+        console.log("Remaining songs for artist", selectedArtist, ":", artistSongs);
+
+        // Remove artist from the list if they have no more songs
+        if (artistSongs.length === 0) {
+            artistList.splice(artistIndex, 1);
+            console.log("Artist", selectedArtist, "has no more songs. Updated artist list:", artistList);
         }
     }
 
+    // Add current song back at the beginning if provided
     if (currentSong) {
-        result.unshift(currentSong);
+        shuffled.unshift(currentSong);
+        console.log("Added currentSong to the beginning of shuffled:", currentSong);
     }
-    return result;
+
+    console.log("Final shuffled array:", shuffled);
+    return shuffled;
 }
 
 function playPlaylist(playlistName) {
