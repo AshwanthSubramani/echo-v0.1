@@ -9,15 +9,127 @@ let selectedPlaylist = null;
 let isShuffling = false;
 let isRepeating = false;
 let originalQueue = [];
-let history = {}; // Tracks song play counts { songId: count }
-let audioCache = new Map(); // Cache for preloaded audio data
+let history = {};
+let audioCache = new Map();
+let searchIndex = null;
+
+// Trie class for efficient title search
+class Trie {
+    constructor() {
+        this.root = {};
+        this.endSymbol = '*';
+    }
+
+    insert(word, songId) {
+        let node = this.root;
+        for (let char of word) {
+            if (!node[char]) node[char] = {};
+            node = node[char];
+        }
+        if (!node[this.endSymbol]) node[this.endSymbol] = new Set();
+        node[this.endSymbol].add(songId);
+    }
+
+    search(word) {
+        let node = this.root;
+        for (let char of word) {
+            if (!node[char]) return [];
+            node = node[char];
+        }
+        return this.collectIds(node);
+    }
+
+    collectIds(node) {
+        let ids = new Set();
+        if (node[this.endSymbol]) {
+            node[this.endSymbol].forEach(id => ids.add(id));
+        }
+        for (let char in node) {
+            if (char !== this.endSymbol) {
+                this.collectIds(node[char]).forEach(id => ids.add(id));
+            }
+        }
+        return Array.from(ids);
+    }
+}
+
+function buildSearchIndex(songs) {
+    console.log("Building search index for songs:", songs);
+    const trie = new Trie();
+    const artistIndex = new Map();
+    const playlistIndex = new Map();
+
+    songs.forEach((song, index) => {
+        // Use index as songId for mapping (since song.id might not match array index after deletions)
+        const songId = index;
+
+        // Insert into trie for title search
+        const words = song.title.split(' ').filter(word => word);
+        for (let word of words) {
+            trie.insert(word.toLowerCase(), songId);
+        }
+
+        // Build artist index
+        if (!artistIndex.has(song.artist)) {
+            artistIndex.set(song.artist, []);
+        }
+        artistIndex.get(song.artist).push(songId);
+
+        // Build playlist index
+        if (!playlistIndex.has(song.playlist)) {
+            playlistIndex.set(song.playlist, []);
+        }
+        playlistIndex.get(song.playlist).push(songId);
+    });
+
+    console.log("Search index built:", { trie, artistIndex, playlistIndex });
+    return { trie, artistIndex, playlistIndex };
+}
+
+function fastSearch(query, index, allSongs) {
+    console.log("fastSearch called with query:", query);
+    query = query.toLowerCase();
+    const results = new Set();
+
+    // Check if query matches an artist name
+    if (index.artistIndex.has(query)) {
+        const songIds = index.artistIndex.get(query);
+        console.log("Artist match for query:", query, "Song IDs:", songIds);
+        for (let id of songIds) {
+            results.add(allSongs[id]);
+        }
+    }
+
+    // Check if query matches a playlist name
+    if (index.playlistIndex.has(query)) {
+        const songIds = index.playlistIndex.get(query);
+        console.log("Playlist match for query:", query, "Song IDs:", songIds);
+        for (let id of songIds) {
+            results.add(allSongs[id]);
+        }
+    }
+
+    // Search in trie for title words
+    const words = query.split(' ').filter(word => word);
+    for (let word of words) {
+        const songIds = index.trie.search(word);
+        console.log("Trie search for word:", word, "Song IDs:", songIds);
+        for (let id of songIds) {
+            results.add(allSongs[id]);
+        }
+    }
+
+    const resultArray = Array.from(results);
+    console.log("Search results:", resultArray);
+    return resultArray;
+}
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
     audioPlayer = new Audio();
     audioPlayer.addEventListener('ended', () => {
         if (songQueue.length > 0 && currentSongIndex + 1 < songQueue.length) {
-            playNext(); // Queue has priority over repeat
+            playNext();
         } else if (isRepeating) {
             audioPlayer.currentTime = 0;
             audioPlayer.play();
@@ -88,7 +200,6 @@ async function playSongWithCache(songId) {
             audioPlayer.src = audioData;
             audioPlayer.play();
 
-            // Preload next 2 songs in queue
             preloadNextSongs(2);
         } catch (error) {
             console.error("Error fetching song:", error);
@@ -205,7 +316,6 @@ function toggleRepeat() {
     console.log("Repeat toggled:", isRepeating);
 }
 
-// Helper function to generate a random integer between min and max (inclusive)
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -262,7 +372,6 @@ function smartShuffle(songs, currentSong = null) {
     return shuffled;
 }
 
-// Helper function to shuffle an array using Fisher-Yates algorithm
 function shuffle(array) {
     console.log("Shuffling array:", array);
     for (let i = array.length - 1; i > 0; i--) {
@@ -273,7 +382,6 @@ function shuffle(array) {
     return array;
 }
 
-// Helper function to get top N frequently played playlists from history
 function getTopPlaylists(history, count = 2) {
     console.log("Getting top playlists from history:", history);
     const playlistCounts = {};
@@ -293,7 +401,6 @@ function getTopPlaylists(history, count = 2) {
     return sortedPlaylists;
 }
 
-// Function to update listening history when a song plays
 function updateHistory() {
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const songId = songQueue[currentSongIndex].id;
@@ -302,7 +409,6 @@ function updateHistory() {
     }
 }
 
-// Function to recommend songs based on current song and history
 function recommendSongs(currentSong, allSongs, history, count = 5) {
     console.log("Recommending songs for currentSong:", currentSong, "count:", count);
 
@@ -640,6 +746,7 @@ function indexSongs() {
         .then(data => {
             allSongs = data.songs;
             console.log("Updated songs:", allSongs);
+            searchIndex = buildSearchIndex(allSongs);
         })
         .catch(error => console.error("Error indexing songs:", error));
 }
@@ -652,7 +759,7 @@ function updatePlayerUI() {
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const currentSong = songQueue[currentSongIndex];
         console.log("Current song:", currentSong);
-        playerInfo.innerHTML = `${currentSong.title} - ${currentSong.artist}`;
+        playerInfo.innerHTML = `${currentSong.title} - ${song.artist}`;
         playerControls.classList.add('active');
     } else {
         playerInfo.innerHTML = 'Select a song to play';
@@ -715,16 +822,13 @@ function showMainPage() {
 
 function search() {
     console.log("search called");
-    const query = document.getElementById('search-input').value.trim().toLowerCase();
+    const query = document.getElementById('search-input').value.trim();
     if (!query) {
         showMainPage();
         return;
     }
 
-    const matchingPlaylists = playlists.filter(p => p.name.toLowerCase().includes(query));
-    const matchingSongs = allSongs.filter(s => 
-        s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query)
-    );
+    const matchingSongs = searchIndex ? fastSearch(query, searchIndex, allSongs) : [];
 
     fetch(`/search_youtube?query=${encodeURIComponent(query)}`)
         .then(response => response.json())
@@ -732,18 +836,21 @@ function search() {
             const songList = document.getElementById('song-list');
             songList.innerHTML = '<h2>Search Results</h2>';
 
-            if (matchingPlaylists.length > 0) {
-                songList.innerHTML += '<h3>Playlists</h3>';
-                matchingPlaylists.forEach(playlist => {
-                    const item = document.createElement('div');
-                    item.className = 'song-item';
-                    item.innerHTML = `
-                        <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
-                        <span>${playlist.name}</span>
-                        <button onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')"><i class="fas fa-folder"></i></button>
-                    `;
-                    songList.appendChild(item);
-                });
+            if (playlists.length > 0) {
+                const matchingPlaylists = playlists.filter(p => p.name.toLowerCase().includes(query.toLowerCase()));
+                if (matchingPlaylists.length > 0) {
+                    songList.innerHTML += '<h3>Playlists</h3>';
+                    matchingPlaylists.forEach(playlist => {
+                        const item = document.createElement('div');
+                        item.className = 'song-item';
+                        item.innerHTML = `
+                            <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
+                            <span>${playlist.name}</span>
+                            <button onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')"><i class="fas fa-folder"></i></button>
+                        `;
+                        songList.appendChild(item);
+                    });
+                }
             }
 
             if (matchingSongs.length > 0) {
@@ -775,7 +882,7 @@ function search() {
                 });
             }
 
-            if (matchingPlaylists.length === 0 && matchingSongs.length === 0 && youtubeData.results.length === 0) {
+            if (matchingSongs.length === 0 && youtubeData.results.length === 0) {
                 songList.innerHTML += '<p>No results found.</p>';
             }
         })
@@ -838,19 +945,18 @@ document.addEventListener('DOMContentLoaded', () => {
         .then(data => {
             allSongs = data.songs;
             console.log("Initial songs:", allSongs);
+            searchIndex = buildSearchIndex(allSongs);
             showMainPage();
             renderQueue();
         })
         .catch(error => console.error("Error fetching songs:", error));
 
-    // Add Enter key event listener for search
     document.getElementById('search-input').addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
             search();
         }
     });
 
-    // Add recommendation button to player controls
     const controls = document.querySelector('.controls');
     const recommendBtn = document.createElement('button');
     recommendBtn.id = 'recommend-btn';
