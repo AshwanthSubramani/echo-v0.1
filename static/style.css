@@ -1,3 +1,4 @@
+/* Reset and base styles */
 * {
     margin: 0;
     padding: 0;
@@ -5,12 +6,13 @@
 }
 
 body {
-    font-family: 'Poppins', sans-serif;
-    background: linear-gradient(135deg, #1a1a2e, #16213e);
-    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #0a0a1b, #141432);
+    color: #d8d8f0;
     overflow-x: hidden;
 }
 
+/* Container */
 .container {
     display: flex;
     min-height: 100vh;
@@ -19,13 +21,13 @@ body {
 /* Sidebar */
 .sidebar {
     width: 280px;
-    background: #0f0f23;
+    background: #0a0a1b;
     padding: 20px;
-    transition: transform 0.3s ease;
     position: fixed;
     height: 100%;
     overflow-y: auto;
     z-index: 1000;
+    transition: transform 0.3s ease;
 }
 
 .sidebar-header {
@@ -36,16 +38,16 @@ body {
 }
 
 .sidebar h1 {
-    font-size: 28px;
-    color: #00ddeb;
-    text-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+    font-size: 26px;
+    color: #7b68ee;
+    text-shadow: 0 0 8px rgba(123, 104, 238, 0.5);
 }
 
 .sidebar-toggle {
     background: none;
     border: none;
-    color: #e0e0e0;
-    font-size: 20px;
+    color: #d8d8f0;
+    font-size: 22px;
     cursor: pointer;
     display: none;
 }
@@ -57,39 +59,40 @@ body {
 
 .search-bar input {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: none;
-    border-radius: 20px 0 0 20px;
-    background: #1a1a2e;
-    color: #e0e0e0;
+    border-radius: 25px 0 0 25px;
+    background: #1c1c3a;
+    color: #d8d8f0;
     font-size: 14px;
-    transition: background 0.3s;
+    transition: background 0.3s, box-shadow 0.3s;
 }
 
 .search-bar input:focus {
     outline: none;
-    background: #2c2c4e;
+    background: #2a2a50;
+    box-shadow: 0 0 8px rgba(123, 104, 238, 0.3);
 }
 
 .search-bar button {
-    padding: 10px;
-    background: #00ddeb;
+    padding: 12px;
+    background: #7b68ee;
     border: none;
-    border-radius: 0 20px 20px 0;
-    color: #0f0f23;
+    border-radius: 0 25px 25px 0;
+    color: #0a0a1b;
     cursor: pointer;
     transition: transform 0.2s, background 0.3s;
 }
 
 .search-bar button:hover {
-    transform: scale(1.1);
-    background: #00b8c4;
+    transform: scale(1.05);
+    background: #6a58d8;
 }
 
 #playlists h2 {
     font-size: 18px;
     margin-bottom: 15px;
-    color: #00ddeb;
+    color: #7b68ee;
 }
 
 .add-playlist {
@@ -99,71 +102,71 @@ body {
 
 .add-playlist input {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: none;
-    border-radius: 20px 0 0 20px;
-    background: #1a1a2e;
-    color: #e0e0e0;
+    border-radius: 25px 0 0 25px;
+    background: #1c1c3a;
+    color: #d8d8f0;
     font-size: 14px;
 }
 
 .add-playlist button {
-    padding: 10px;
-    background: #ff2e63;
+    padding: 12px;
+    background: #ff4d6d;
     border: none;
-    border-radius: 0 20px 20px 0;
-    color: #e0e0e0;
+    border-radius: 0 25px 25px 0;
+    color: #d8d8f0;
     cursor: pointer;
     transition: transform 0.2s;
 }
 
 .add-playlist button:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .playlist-item {
     display: flex;
     align-items: center;
-    margin-bottom: 15px;
-    background: #1a1a2e;
-    border-radius: 10px;
+    margin-bottom: 12px;
+    background: #1c1c3a;
+    border-radius: 12px;
     padding: 10px;
     transition: transform 0.3s, box-shadow 0.3s;
     animation: fadeIn 0.5s ease;
 }
 
 .playlist-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0, 221, 235, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(123, 104, 238, 0.4);
 }
 
 .playlist-image {
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     object-fit: cover;
     border-radius: 8px;
-    margin-right: 10px;
+    margin-right: 12px;
     cursor: pointer;
     transition: transform 0.3s;
 }
 
 .playlist-image:hover {
-    transform: scale(1.1);
+    transform: scale(1.08);
 }
 
 .playlist-name {
     flex: 1;
     background: none;
     border: none;
-    color: #e0e0e0;
-    font-size: 16px;
+    color: #d8d8f0;
+    font-size: 15px;
     cursor: pointer;
     text-align: left;
     transition: color 0.3s;
 }
 
 .playlist-name:hover {
-    color: #00ddeb;
+    color: #7b68ee;
 }
 
 /* Main Content */
@@ -172,107 +175,107 @@ body {
     margin-left: 280px;
     padding: 20px;
     overflow-y: auto;
-    padding-bottom: 100px; /* Space for player */
+    padding-bottom: 120px; /* Space for player */
 }
 
 #song-list h2 {
-    font-size: 24px;
+    font-size: 22px;
     margin-bottom: 20px;
-    color: #00ddeb;
-    text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+    color: #7b68ee;
+    text-shadow: 0 0 5px rgba(123, 104, 238, 0.4);
 }
 
 .add-song {
     display: flex;
     margin-bottom: 20px;
-    background: #1a1a2e;
-    border-radius: 20px;
+    background: #1c1c3a;
+    border-radius: 25px;
     padding: 5px;
 }
 
 .add-song input {
     flex: 1;
-    padding: 10px;
+    padding: 12px;
     border: none;
     background: transparent;
-    color: #e0e0e0;
+    color: #d8d8f0;
     font-size: 14px;
 }
 
 .add-song select {
-    padding: 10px;
+    padding: 12px;
     border: none;
-    background: #2c2c4e;
-    color: #e0e0e0;
-    border-radius: 10px;
+    background: #2a2a50;
+    color: #d8d8f0;
+    border-radius: 12px;
     margin: 0 5px;
 }
 
 .add-song button {
-    padding: 10px;
-    background: #ff2e63;
+    padding: 12px;
+    background: #ff4d6d;
     border: none;
-    border-radius: 20px;
-    color: #e0e0e0;
+    border-radius: 25px;
+    color: #d8d8f0;
     cursor: pointer;
     transition: transform 0.2s;
 }
 
 .add-song button:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
 }
 
 .song-item {
     display: flex;
     align-items: center;
-    padding: 15px;
-    background: #1a1a2e;
-    margin-bottom: 10px;
-    border-radius: 10px;
+    padding: 12px;
+    background: #1c1c3a;
+    margin-bottom: 8px;
+    border-radius: 12px;
     transition: transform 0.3s, box-shadow 0.3s;
     animation: slideIn 0.5s ease;
 }
 
 .song-item:hover {
-    transform: translateX(5px);
-    box-shadow: 0 5px 15px rgba(0, 221, 235, 0.3);
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(123, 104, 238, 0.4);
 }
 
 .song-name {
     flex: 1;
-    color: #e0e0e0;
-    font-size: 16px;
+    color: #d8d8f0;
+    font-size: 15px;
     cursor: pointer;
     transition: color 0.3s, text-shadow 0.3s;
 }
 
 .song-name:hover {
-    color: #00ddeb;
-    text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+    color: #7b68ee;
+    text-shadow: 0 0 6px rgba(123, 104, 238, 0.5);
 }
 
 .song-item button {
-    margin-left: 10px;
+    margin-left: 8px;
     padding: 8px;
-    background: #2c2c4e;
+    background: #2a2a50;
     border: none;
-    color: #e0e0e0;
+    color: #d8d8f0;
     cursor: pointer;
     border-radius: 50%;
     transition: transform 0.2s, background 0.3s;
 }
 
 .song-item button:hover {
-    transform: scale(1.2);
-    background: #00ddeb;
+    transform: scale(1.15);
+    background: #7b68ee;
 }
 
 .song-item .delete-btn {
-    background: #ff2e63;
+    background: #ff4d6d;
 }
 
 .song-item .delete-btn:hover {
-    background: #d81b60;
+    background: #e63950;
 }
 
 #sortable-songs {
@@ -288,25 +291,36 @@ body {
 .player-container {
     position: fixed;
     bottom: 0;
-    left: 280px;
+    left: 0;
     right: 0;
-    background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+    background: linear-gradient(135deg, #0a0a1b, #1c1c3a);
     padding: 15px;
-    box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.6);
     z-index: 999;
+    transition: opacity 0.3s;
 }
 
 .player-container.active {
-    transform: translateY(0);
+    opacity: 1;
+}
+
+.player-artwork {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #7b68ee, #ff4d6d);
+    border-radius: 8px;
+    margin-right: 10px;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 #player-info {
-    font-size: 18px;
-    color: #00ddeb;
+    display: inline-block;
+    font-size: 16px;
+    color: #7b68ee;
+    vertical-align: middle;
     margin-bottom: 10px;
-    text-align: center;
-    text-shadow: 0 0 5px rgba(0, 221, 235, 0.5);
+    text-shadow: 0 0 5px rgba(123, 104, 238, 0.4);
     animation: fadeIn 0.5s ease;
 }
 
@@ -315,54 +329,54 @@ body {
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
+    gap: 10px;
 }
 
 .player-controls button {
-    margin: 5px;
-    padding: 12px;
-    background: #2c2c4e;
+    padding: 10px;
+    background: #2a2a50;
     border: none;
-    color: #e0e0e0;
+    color: #d8d8f0;
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.2s, background 0.3s, box-shadow 0.3s;
 }
 
 .player-controls button:hover {
-    transform: scale(1.2);
-    background: #00ddeb;
-    box-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+    transform: scale(1.15);
+    background: #7b68ee;
+    box-shadow: 0 0 8px rgba(123, 104, 238, 0.5);
 }
 
 .player-controls button.active {
-    background: #ff2e63;
-    box-shadow: 0 0 10px rgba(255, 46, 99, 0.5);
+    background: #ff4d6d;
+    box-shadow: 0 0 8px rgba(255, 77, 109, 0.5);
 }
 
 .progress-container {
     display: flex;
     align-items: center;
     flex: 1;
-    max-width: 400px;
+    max-width: 350px;
     margin: 0 10px;
 }
 
 #progress {
     flex: 1;
-    height: 8px;
-    background: #2c2c4e;
-    border-radius: 4px;
+    height: 6px;
+    background: #2a2a50;
+    border-radius: 3px;
     cursor: pointer;
     appearance: none;
 }
 
 #progress::-webkit-slider-thumb {
     appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #00ddeb;
+    width: 14px;
+    height: 14px;
+    background: #7b68ee;
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+    box-shadow: 0 0 8px rgba(123, 104, 238, 0.5);
     transition: transform 0.2s;
 }
 
@@ -372,8 +386,8 @@ body {
 
 #current-time, #duration {
     font-size: 12px;
-    margin: 0 10px;
-    color: #e0e0e0;
+    margin: 0 8px;
+    color: #d8d8f0;
 }
 
 .volume-container {
@@ -384,24 +398,24 @@ body {
 
 .volume-container i {
     margin-right: 5px;
-    color: #e0e0e0;
+    color: #d8d8f0;
 }
 
 #volume {
-    width: 100px;
-    height: 8px;
-    background: #2c2c4e;
-    border-radius: 4px;
+    width: 80px;
+    height: 6px;
+    background: #2a2a50;
+    border-radius: 3px;
     appearance: none;
 }
 
 #volume::-webkit-slider-thumb {
     appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #00ddeb;
+    width: 14px;
+    height: 14px;
+    background: #7b68ee;
     border-radius: 50%;
-    box-shadow: 0 0 10px rgba(0, 221, 235, 0.5);
+    box-shadow: 0 0 8px rgba(123, 104, 238, 0.5);
     transition: transform 0.2s;
 }
 
@@ -410,25 +424,25 @@ body {
 }
 
 #queue-toggle {
-    background: #2c2c4e;
+    background: #2a2a50;
     transition: transform 0.2s, background 0.3s;
 }
 
 #queue-toggle:hover {
-    transform: scale(1.2);
-    background: #ff2e63;
+    transform: scale(1.15);
+    background: #ff4d6d;
 }
 
 /* Queue Panel */
 .queue-panel {
     position: fixed;
-    bottom: 80px;
+    bottom: 90px;
     right: 0;
-    width: 300px;
-    max-height: 400px;
-    background: #1a1a2e;
-    border-radius: 10px 0 0 10px;
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+    width: 280px;
+    max-height: 350px;
+    background: #1c1c3a;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.6);
     transform: translateX(100%);
     transition: transform 0.3s ease;
     z-index: 998;
@@ -443,26 +457,26 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #2c2c4e;
+    padding: 12px;
+    border-bottom: 1px solid #2a2a50;
 }
 
 .queue-header h3 {
-    font-size: 16px;
-    color: #00ddeb;
+    font-size: 15px;
+    color: #7b68ee;
 }
 
 #queue-close {
     background: none;
     border: none;
-    color: #e0e0e0;
-    font-size: 16px;
+    color: #d8d8f0;
+    font-size: 15px;
     cursor: pointer;
     transition: color 0.3s;
 }
 
 #queue-close:hover {
-    color: #ff2e63;
+    color: #ff4d6d;
 }
 
 .queue-list {
@@ -471,7 +485,7 @@ body {
 
 .queue-item {
     padding: 10px;
-    background: #2c2c4e;
+    background: #2a2a50;
     margin-bottom: 5px;
     border-radius: 8px;
     display: flex;
@@ -481,12 +495,12 @@ body {
 }
 
 .queue-item span {
-    font-size: 14px;
-    color: #e0e0e0;
+    font-size: 13px;
+    color: #d8d8f0;
 }
 
 .queue-item span:last-child {
-    color: #00ddeb;
+    color: #7b68ee;
     font-size: 12px;
 }
 
@@ -497,7 +511,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -506,24 +520,24 @@ body {
 }
 
 .popup-content {
-    background: #1a1a2e;
+    background: #1c1c3a;
     padding: 20px;
-    border-radius: 10px;
+    border-radius: 12px;
     text-align: center;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
 }
 
 .popup-content h3 {
-    margin: 0 0 20px;
-    color: #00ddeb;
+    margin: 0 0 15px;
+    color: #7b68ee;
 }
 
 .popup-content button {
     margin: 5px;
     padding: 10px 20px;
-    background: #00ddeb;
+    background: #7b68ee;
     border: none;
-    color: #0f0f23;
+    color: #0a0a1b;
     border-radius: 20px;
     cursor: pointer;
     transition: transform 0.2s, background 0.3s;
@@ -531,7 +545,7 @@ body {
 
 .popup-content button:hover {
     transform: scale(1.05);
-    background: #00b8c4;
+    background: #6a58d8;
 }
 
 /* Animations */
@@ -541,7 +555,7 @@ body {
 }
 
 @keyframes slideIn {
-    from { transform: translateX(20px); opacity: 0; }
+    from { transform: translateX(15px); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
 
@@ -549,7 +563,7 @@ body {
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(-100%);
-        width: 250px;
+        width: 260px;
     }
 
     .sidebar.active {
@@ -565,27 +579,36 @@ body {
     }
 
     .player-container {
-        left: 0;
+        padding: 10px;
     }
 
     .player-controls {
         flex-direction: column;
-        align-items: stretch;
+        gap: 8px;
     }
 
     .progress-container {
         max-width: 100%;
-        margin: 10px 0;
+        margin: 8px 0;
     }
 
     .volume-container {
         justify-content: center;
-        margin: 10px 0;
+        margin: 8px 0;
     }
 
     .queue-panel {
         width: 100%;
-        border-radius: 10px;
+        border-radius: 12px;
         bottom: 80px;
+    }
+
+    .player-artwork {
+        width: 40px;
+        height: 40px;
+    }
+
+    #player-info {
+        font-size: 14px;
     }
 }

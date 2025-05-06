@@ -11,7 +11,9 @@
     <script src="/static/script.js"></script>
 </head>
 <body>
+    <!-- Main container with sidebar and content -->
     <div class="container">
+        <!-- Sidebar for playlists and search -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <h1>Echo</h1>
@@ -23,34 +25,38 @@
             </div>
             <div id="playlists" class="playlists"></div>
         </div>
+        <!-- Main content for songs and queue -->
         <div class="main-content">
             <div id="song-list" class="song-list"></div>
-            <div class="player-container">
-                <div id="player-info">Select a song to play</div>
-                <div class="player-controls">
-                    <button id="prev-btn" onclick="playPrevious()" title="Previous"><i class="fas fa-backward"></i></button>
-                    <button id="play-pause" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
-                    <button id="next-btn" onclick="playNext()" title="Next"><i class="fas fa-forward"></i></button>
-                    <button id="shuffle-btn" onclick="toggleShuffle()" title="Shuffle"><i class="fas fa-random"></i></button>
-                    <button id="repeat-btn" onclick="toggleRepeat()" title="Repeat"><i class="fas fa-redo"></i></button>
-                    <div class="progress-container">
-                        <span id="current-time">0:00</span>
-                        <input type="range" id="progress" min="0" max="100" value="0" oninput="seek(event)">
-                        <span id="duration">0:00</span>
-                    </div>
-                    <div class="volume-container">
-                        <i class="fas fa-volume-up"></i>
-                        <input type="range" id="volume" min="0" max="100" value="100" oninput="setVolume()">
-                    </div>
-                    <button id="queue-toggle" title="Show Queue"><i class="fas fa-list"></i></button>
-                </div>
-            </div>
+            <!-- Queue panel, slides in from right -->
             <div id="queue-panel" class="queue-panel">
                 <div class="queue-header">
                     <h3>Queue</h3>
                     <button id="queue-close"><i class="fas fa-times"></i></button>
                 </div>
                 <div id="queue-list" class="queue-list"></div>
+            </div>
+        </div>
+        <!-- Player, fixed at bottom -->
+        <div class="player-container">
+            <div class="player-artwork"></div>
+            <div id="player-info">Select a song to play</div>
+            <div class="player-controls">
+                <button id="prev-btn" onclick="playPrevious()" title="Previous"><i class="fas fa-backward"></i></button>
+                <button id="play-pause" onclick="togglePlayPause()" title="Play/Pause"><i class="fas fa-play"></i></button>
+                <button id="next-btn" onclick="playNext()" title="Next"><i class="fas fa-forward"></i></button>
+                <button id="shuffle-btn" onclick="toggleShuffle()" title="Shuffle"><i class="fas fa-random"></i></button>
+                <button id="repeat-btn" onclick="toggleRepeat()" title="Repeat"><i class="fas fa-redo"></i></button>
+                <div class="progress-container">
+                    <span id="current-time">0:00</span>
+                    <input type="range" id="progress" min="0" max="100" value="0" oninput="seek(event)">
+                    <span id="duration">0:00</span>
+                </div>
+                <div class="volume-container">
+                    <i class="fas fa-volume-up"></i>
+                    <input type="range" id="volume" min="0" max="100" value="100" oninput="setVolume()">
+                </div>
+                <button id="queue-toggle" title="Show Queue"><i class="fas fa-list"></i></button>
             </div>
         </div>
     </div>
