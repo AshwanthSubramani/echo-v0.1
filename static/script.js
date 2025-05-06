@@ -9,8 +9,10 @@ let isRepeating = false;
 let originalQueue = [];
 
 function initAudioPlayer() {
+    console.log("Initializing audio player...");
     audioPlayer = new Audio();
     audioPlayer.addEventListener('ended', () => {
+        console.log("Song ended");
         if (isRepeating) {
             audioPlayer.currentTime = 0;
             audioPlayer.play();
@@ -24,12 +26,19 @@ function initAudioPlayer() {
         playNext();
     });
     audioPlayer.addEventListener('loadeddata', () => {
-        audioPlayer.play();
+        console.log("Audio loaded, playing...");
+        audioPlayer.play().catch(err => console.error("Play error:", err));
         updatePlayerUI();
     });
     audioPlayer.addEventListener('timeupdate', updateProgress);
-    audioPlayer.addEventListener('play', () => document.getElementById('play-pause').innerHTML = '<i class="fas fa-pause"></i>');
-    audioPlayer.addEventListener('pause', () => document.getElementById('play-pause').innerHTML = '<i class="fas fa-play"></i>');
+    audioPlayer.addEventListener('play', () => {
+        console.log("Audio playing");
+        document.getElementById('play-pause').innerHTML = '<i class="fas fa-pause"></i>';
+    });
+    audioPlayer.addEventListener('pause', () => {
+        console.log("Audio paused");
+        document.getElementById('play-pause').innerHTML = '<i class="fas fa-play"></i>';
+    });
 }
 
 function updateProgress() {
@@ -53,6 +62,10 @@ function updatePlayerUI() {
     console.log("updatePlayerUI called:", { currentSongIndex, songQueueLength: songQueue.length, currentSong: songQueue[currentSongIndex] });
     const playerInfo = document.getElementById('player-info');
     const playerControls = document.querySelector('.player-controls');
+    if (!playerInfo || !playerControls) {
+        console.error("Player UI elements not found");
+        return;
+    }
     if (currentSongIndex >= 0 && songQueue[currentSongIndex]) {
         const currentSong = songQueue[currentSongIndex];
         playerInfo.innerHTML = `${currentSong.title || 'Unknown Title'} - ${currentSong.artist || 'Unknown Artist'}`;
@@ -66,6 +79,10 @@ function updatePlayerUI() {
 
 function updateQueueUI() {
     const queueList = document.getElementById('queue-list');
+    if (!queueList) {
+        console.error("Queue list element not found");
+        return;
+    }
     queueList.innerHTML = '<h3>Queue</h3>';
     if (songQueue.length === 0) {
         queueList.innerHTML += '<p>No songs in queue.</p>';
@@ -82,26 +99,39 @@ function updateQueueUI() {
     }
 }
 
-async function playSong(songId) {
+async function playSong(songId, retries = 2) {
+    console.log("playSong called:", { songId, retries });
     const song = allSongs.find(s => s.id === parseInt(songId));
     if (!song) {
         console.error("Song not found:", songId);
+        document.getElementById('player-info').innerHTML = 'Song not found';
         return;
     }
 
-    console.log("playSong:", { songId, song });
-    const playlistSongs = allSongs.filter(s => s.playlist === song.playlist).sort((a, b) => a.position - b.position);
-    songQueue = playlistSongs;
-    originalQueue = [...playlistSongs];
-    currentSongIndex = playlistSongs.findIndex(s => s.id === song.id);
-    if (isShuffling) {
-        songQueue = smartShuffle(playlistSongs, song);
-        currentSongIndex = songQueue.findIndex(s => s.id === song.id);
+    try {
+        console.log("Playing song:", song);
+        const playlistSongs = allSongs.filter(s => s.playlist === song.playlist).sort((a, b) => a.position - b.position);
+        songQueue = playlistSongs;
+        originalQueue = [...playlistSongs];
+        currentSongIndex = playlistSongs.findIndex(s => s.id === song.id);
+        if (isShuffling) {
+            songQueue = smartShuffle(playlistSongs, song);
+            currentSongIndex = songQueue.findIndex(s => s.id === song.id);
+        }
+        audioPlayer.src = song.url;
+        await audioPlayer.load();
+        console.log("After playSong:", { currentSongIndex, songQueueLength: songQueue.length, currentSong: songQueue[currentSongIndex] });
+        updatePlayerUI();
+    } catch (err) {
+        console.error("Error loading song:", err);
+        if (retries > 0) {
+            console.log(`Retrying playSong (${retries} attempts left)...`);
+            setTimeout(() => playSong(songId, retries - 1), 1000);
+        } else {
+            document.getElementById('player-info').innerHTML = 'Failed to play song';
+            playNext();
+        }
     }
-    audioPlayer.src = song.url;
-    audioPlayer.load();
-    console.log("After playSong:", { currentSongIndex, songQueueLength: songQueue.length, currentSong: songQueue[currentSongIndex] });
-    updatePlayerUI();
 }
 
 function addToQueue(songId) {
@@ -117,7 +147,7 @@ function addToQueue(songId) {
         originalQueue = [song];
         currentSongIndex = 0;
         audioPlayer.src = song.url;
-        audioPlayer.load();
+        audioPlayer.load().catch(err => console.error("Queue load error:", err));
     } else {
         songQueue.push(song);
         originalQueue.push(song);
@@ -127,11 +157,12 @@ function addToQueue(songId) {
 }
 
 function playNext() {
+    console.log("playNext called");
     currentSongIndex++;
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
         audioPlayer.src = nextSong.url;
-        audioPlayer.load();
+        audioPlayer.load().catch(err => console.error("Next song load error:", err));
         updatePlayerUI();
         console.log("Next song:", nextSong, "Index:", currentSongIndex);
     } else {
@@ -141,29 +172,34 @@ function playNext() {
 }
 
 function playPrevious() {
+    console.log("playPrevious called");
     currentSongIndex--;
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
         audioPlayer.src = prevSong.url;
-        audioPlayer.load();
+        audioPlayer.load().catch(err => console.error("Previous song load error:", err));
         updatePlayerUI();
         console.log("Previous song:", prevSong, "Index:", currentSongIndex);
     }
 }
 
 function stopPlayer() {
+    console.log("stopPlayer called");
     audioPlayer.pause();
     audioPlayer.src = '';
     currentSongIndex = -1;
     songQueue = [];
     originalQueue = [];
     updatePlayerUI();
-    console.log("Player stopped");
 }
 
 function togglePlayPause() {
-    if (audioPlayer.paused) audioPlayer.play();
-    else audioPlayer.pause();
+    console.log("togglePlayPause called");
+    if (audioPlayer.paused) {
+        audioPlayer.play().catch(err => console.error("Play error:", err));
+    } else {
+        audioPlayer.pause();
+    }
 }
 
 function seek(event) {
@@ -178,6 +214,7 @@ function setVolume() {
 }
 
 function toggleShuffle() {
+    console.log("toggleShuffle called");
     isShuffling = !isShuffling;
     const shuffleBtn = document.getElementById('shuffle-btn');
     shuffleBtn.classList.toggle('active', isShuffling);
@@ -234,6 +271,7 @@ function smartShuffle(songs, currentSong) {
 }
 
 function toggleRepeat() {
+    console.log("toggleRepeat called");
     isRepeating = !isRepeating;
     const repeatBtn = document.getElementById('repeat-btn');
     repeatBtn.classList.toggle('active', isRepeating);
@@ -241,6 +279,7 @@ function toggleRepeat() {
 }
 
 function playPlaylist(playlistName) {
+    console.log("playPlaylist called:", playlistName);
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
     songQueue = playlistSongs;
     originalQueue = [...playlistSongs];
@@ -254,6 +293,7 @@ function playPlaylist(playlistName) {
 }
 
 function showEditPlaylistPopup(playlistId, playlistName) {
+    console.log("showEditPlaylistPopup called:", { playlistId, playlistName });
     if (!playlistId) {
         alert("Cannot edit this playlist. Please create it through the interface.");
         return;
@@ -276,6 +316,7 @@ function showEditPlaylistPopup(playlistId, playlistName) {
 }
 
 function updatePlaylistImage(playlistId) {
+    console.log("updatePlaylistImage called:", playlistId);
     if (!playlistId) {
         alert("Invalid playlist ID. Please try again.");
         return;
@@ -311,6 +352,7 @@ function updatePlaylistImage(playlistId) {
 }
 
 function renamePlaylist(playlistId, currentName) {
+    console.log("renamePlaylist called:", { playlistId, currentName });
     if (!playlistId) {
         alert("Invalid playlist ID. Please try again.");
         return;
@@ -348,6 +390,7 @@ function renamePlaylist(playlistId, currentName) {
 }
 
 function showPlaylistSongs(playlistName) {
+    console.log("showPlaylistSongs called:", playlistName);
     selectedPlaylist = playlistName;
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
     const songList = document.getElementById('song-list');
@@ -380,6 +423,7 @@ function showPlaylistSongs(playlistName) {
 }
 
 function createPlaylist() {
+    console.log("createPlaylist called");
     const playlistName = document.getElementById('new-playlist-name').value;
     if (!playlistName) {
         alert("Playlist name is empty. Proceeding to create playlist with empty name.");
@@ -406,6 +450,7 @@ function createPlaylist() {
 }
 
 function addSongFromUrl(youtubeUrl, playlistName) {
+    console.log("addSongFromUrl called:", { youtubeUrl, playlistName });
     if (!youtubeUrl || !playlistName) {
         alert("Please select a playlist.");
         return;
@@ -429,6 +474,7 @@ function addSongFromUrl(youtubeUrl, playlistName) {
 }
 
 function deletePlaylist(playlistId) {
+    console.log("deletePlaylist called:", playlistId);
     if (!confirm(`Are you sure you want to delete this playlist?`)) return;
     fetch('/delete_playlist', {
         method: 'POST',
@@ -446,6 +492,7 @@ function deletePlaylist(playlistId) {
 }
 
 function deleteSong(songId) {
+    console.log("deleteSong called:", songId);
     if (!confirm("Are you sure you want to delete this song?")) return;
     fetch('/delete_song', {
         method: 'POST',
@@ -484,16 +531,19 @@ function makeSortable() {
 }
 
 function indexSongs() {
+    console.log("indexSongs called");
     fetch('/songs')
         .then(response => response.json())
         .then(data => {
             allSongs = data.songs;
             console.log("Updated songs:", allSongs);
             if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
-        });
+        })
+        .catch(error => console.error("Error indexing songs:", error));
 }
 
 function renderPlaylists() {
+    console.log("renderPlaylists called");
     fetch('/playlists')
         .then(response => response.json())
         .then(data => {
@@ -526,10 +576,12 @@ function renderPlaylists() {
                     playlistSelect.appendChild(option);
                 });
             }
-        });
+        })
+        .catch(error => console.error("Error rendering playlists:", error));
 }
 
 function showMainPage() {
+    console.log("showMainPage called");
     selectedPlaylist = null;
     const songList = document.getElementById('song-list');
     songList.innerHTML = `
@@ -544,6 +596,7 @@ function showMainPage() {
 }
 
 function search() {
+    console.log("search called");
     const query = document.getElementById('search-input').value.trim().toLowerCase();
     if (!query) {
         showMainPage();
@@ -611,7 +664,14 @@ function search() {
         .catch(error => console.error("Error searching:", error));
 }
 
+// Toggle queue panel visibility
+function toggleQueuePanel() {
+    const queuePanel = document.getElementById('queue-panel');
+    queuePanel.classList.toggle('active');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, initializing...");
     initAudioPlayer();
     renderPlaylists();
     fetch('/songs')
@@ -620,5 +680,10 @@ document.addEventListener('DOMContentLoaded', () => {
             allSongs = data.songs;
             console.log("Initial songs:", allSongs);
             showMainPage();
-        });
+        })
+        .catch(error => console.error("Error loading songs:", error));
+
+    // Attach queue toggle event
+    document.getElementById('queue-toggle').addEventListener('click', toggleQueuePanel);
+    document.getElementById('queue-close').addEventListener('click', toggleQueuePanel);
 });
