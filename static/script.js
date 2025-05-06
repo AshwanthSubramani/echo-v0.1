@@ -122,7 +122,7 @@ function playPrevious() {
         audioPlayer.load();
         updatePlayerUI();
         renderQueue();
-        console.log("Previous song:", prevSong, "Index:", currentSongIndex");
+        console.log("Previous song:", prevSong, "Index:", currentSongIndex);
     }
 }
 
@@ -241,7 +241,7 @@ function shuffle(array) {
     console.log("Shuffling array:", array);
     for (let i = array.length - 1; i > 0; i--) {
         const j = randomInt(0, i);
-        [array[i], array[j]] = [array[j], array[i]];
+        [array[i], array[j] = [array[j], array[i]]];
     }
     console.log("Shuffled array:", array);
     return array;
