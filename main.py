@@ -10,7 +10,6 @@ import uuid
 
 app = FastAPI()
 
-# Mount the static directory
 app.mount("/static", StaticFiles(directory="static"), name="static")
 MUSIC_DIR = Path(r"C:\Users\Ashwa\Desktop\echo-main\Music")
 IMAGES_DIR = Path(r"C:\Users\Ashwa\Desktop\echo-main\static\images")
