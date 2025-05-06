@@ -259,10 +259,29 @@ function renderQueue() {
 
 function clearQueue() {
     console.log("clearQueue called");
-    stopPlayer();
+    // Preserve the current song if one is playing
+    let currentSong = null;
+    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
+        currentSong = songQueue[currentSongIndex];
+    }
+
+    // Clear the queue and original queue
     songQueue = [];
     originalQueue = [];
+
+    // If a song is currently playing, add it back as the only song in the queue
+    if (currentSong) {
+        songQueue = [currentSong];
+        originalQueue = [currentSong];
+        currentSongIndex = 0;
+    } else {
+        currentSongIndex = -1;
+    }
+
+    // Update the UI
     renderQueue();
+    updatePlayerUI();
+    console.log("Queue cleared. Current song:", currentSong, "Queue:", songQueue);
 }
 
 function showEditPlaylistPopup(playlistId, playlistName) {
