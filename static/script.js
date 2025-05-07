@@ -794,48 +794,95 @@ function showRecommendations() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
     initAudioPlayer();
-    renderPlaylists();
-    fetch('/songs')
-        .then(response => response.json())
-        .then(data => {
-            allSongs = data.songs;
-            console.log("Initial songs:", allSongs);
-            showMainPage();
-            renderQueue();
-        })
-        .catch(error => console.error("Error fetching songs:", error));
 
-    // Add Enter key event listener for search
-    document.getElementById('search-input').addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            search();
-        }
-    });
+    // Login and Signup form handling
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
 
-    // Add recommendation button to player controls
-    const controls = document.querySelector('.controls');
-    const recommendBtn = document.createElement('button');
-    recommendBtn.id = 'recommend-btn';
-    recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
-    recommendBtn.onclick = showRecommendations;
-    controls.appendChild(recommendBtn);
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const gmail = document.getElementById('login-gmail').value;
+            const password = document.getElementById('login-password').value;
+            const response = await fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `gmail=${encodeURIComponent(gmail)}&password=${encodeURIComponent(password)}`
+            });
+            if (response.status === 303) {
+                window.location.href = '/index.html';
+            } else {
+                alert('Login failed');
+            }
+        });
+    }
+
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const gmail = document.getElementById('signup-gmail').value;
+            const username = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+            const response = await fetch('/signup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `gmail=${encodeURIComponent(gmail)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+            });
+            if (response.status === 303) {
+                window.location.href = '/index.html';
+            } else {
+                alert('Signup failed');
+            }
+        });
+    }
+
+    // Initialize playlists and songs only on index.html
+    if (document.getElementById('playlists')) {
+        renderPlaylists();
+        fetch('/songs')
+            .then(response => response.json())
+            .then(data => {
+                allSongs = data.songs;
+                console.log("Initial songs:", allSongs);
+                showMainPage();
+                renderQueue();
+            })
+            .catch(error => console.error("Error fetching songs:", error));
+
+        // Add Enter key event listener for search
+        document.getElementById('search-input').addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                search();
+            }
+        });
+
+        // Add recommendation button to player controls
+        const controls = document.querySelector('.controls');
+        const recommendBtn = document.createElement('button');
+        recommendBtn.id = 'recommend-btn';
+        recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+        recommendBtn.onclick = showRecommendations;
+        controls.appendChild(recommendBtn);
+    }
 
     // Queue resizing logic
     const queueResizeHandle = document.getElementById('queue-resize-handle');
     const queueCollapse = document.getElementById('queueCollapse');
     let isQueueDragging = false;
 
-    queueResizeHandle.addEventListener('mousedown', (e) => {
-        isQueueDragging = true;
-        document.addEventListener('mousemove', onQueueMouseMove);
-        document.addEventListener('mouseup', onQueueMouseUp);
-    });
+    if (queueResizeHandle) {
+        queueResizeHandle.addEventListener('mousedown', (e) => {
+            isQueueDragging = true;
+            document.addEventListener('mousemove', onQueueMouseMove);
+            document.addEventListener('mouseup', onQueueMouseUp);
+        });
 
-    queueResizeHandle.addEventListener('touchstart', (e) => {
-        isQueueDragging = true;
-        document.addEventListener('touchmove', onQueueTouchMove);
-        document.addEventListener('touchend', onQueueTouchEnd);
-    });
+        queueResizeHandle.addEventListener('touchstart', (e) => {
+            isQueueDragging = true;
+            document.addEventListener('touchmove', onQueueTouchMove);
+            document.addEventListener('touchend', onQueueTouchEnd);
+        });
+    }
 
     function onQueueMouseMove(e) {
         if (!isQueueDragging) return;
@@ -875,17 +922,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const playerControls = document.querySelector('.player-controls');
     let isPlayerDragging = false;
 
-    playerResizeHandle.addEventListener('mousedown', (e) => {
-        isPlayerDragging = true;
-        document.addEventListener('mousemove', onPlayerMouseMove);
-        document.addEventListener('mouseup', onPlayerMouseUp);
-    });
+    if (playerResizeHandle) {
+        playerResizeHandle.addEventListener('mousedown', (e) => {
+            isPlayerDragging = true;
+            document.addEventListener('mousemove', onPlayerMouseMove);
+            document.addEventListener('mouseup', onPlayerMouseUp);
+        });
 
-    playerResizeHandle.addEventListener('touchstart', (e) => {
-        isPlayerDragging = true;
-        document.addEventListener('touchmove', onPlayerTouchMove);
-        document.addEventListener('touchend', onPlayerTouchEnd);
-    });
+        playerResizeHandle.addEventListener('touchstart', (e) => {
+            isPlayerDragging = true;
+            document.addEventListener('touchmove', onPlayerTouchMove);
+            document.addEventListener('touchend', onPlayerTouchEnd);
+        });
+    }
 
     function onPlayerMouseMove(e) {
         if (!isPlayerDragging) return;

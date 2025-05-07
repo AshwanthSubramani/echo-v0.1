@@ -1,6 +1,9 @@
-from fastapi import FastAPI, HTTPException, Form, File, UploadFile
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Request
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
+from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+import hashlib
+import json
 import sqlite3
 from pathlib import Path
 import yt_dlp
@@ -9,6 +12,63 @@ import shutil
 import uuid
 
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+# In-memory user storage (use a file or database in production)
+USERS_FILE = Path("users.json")
+if USERS_FILE.exists():
+    with open(USERS_FILE, "r") as f:
+        users = json.load(f)
+else:
+    users = {}
+
+def save_users():
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f)
+
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return RedirectResponse(url="/login")
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.post("/login")
+async def login(gmail: str = Form(...), password: str = Form(...)):
+    hashed_password = hash_password(password)
+    if gmail in users and users[gmail]["password"] == hashed_password:
+        response = RedirectResponse(url="/index.html", status_code=303)
+        response.set_cookie(key="session_gmail", value=gmail, httponly=True)
+        return response
+    raise HTTPException(status_code=401, detail="Invalid credentials")
+
+@app.post("/signup")
+async def signup(gmail: str = Form(...), username: str = Form(...), password: str = Form(...)):
+    if gmail in users:
+        raise HTTPException(status_code=400, detail="Gmail already registered")
+    hashed_password = hash_password(password)
+    users[gmail] = {"username": username, "password": hashed_password}
+    save_users()
+    response = RedirectResponse(url="/index.html", status_code=303)
+    response.set_cookie(key="session_gmail", value=gmail, httponly=True)
+    return response
+
+@app.get("/index.html", response_class=HTMLResponse)
+async def index(request: Request):
+    gmail = request.cookies.get("session_gmail")
+    if not gmail or gmail not in users:
+        return RedirectResponse(url="/login")
+    return templates.TemplateResponse("index.html", {"request": request, "username": users[gmail]["username"]})
+
+@app.get("/logout")
+async def logout(request: Request):
+    response = RedirectResponse(url="/login")
+    response.delete_cookie("session_gmail")
+    return response
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 MUSIC_DIR = Path(r"C:\Users\Ashwa\Desktop\echo-main\Music")
@@ -21,33 +81,31 @@ DB_PATH = Path("songs.db")
 DEFAULT_IMAGE = "default.jpg"
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("DROP TABLE IF EXISTS songs")
-    c.execute("DROP TABLE IF EXISTS playlists")
-    c.execute('''CREATE TABLE songs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        artist TEXT,
-        filename TEXT NOT NULL UNIQUE,
-        playlist TEXT,
-        position INTEGER
-    )''')
-    c.execute('''CREATE TABLE playlists (
-        name TEXT,
-        image_path TEXT,
-        id INTEGER PRIMARY KEY AUTOINCREMENT
-    )''')
-    conn.commit()
-    conn.close()
+    if not DB_PATH.exists():
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute('''CREATE TABLE songs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            artist TEXT,
+            filename TEXT NOT NULL UNIQUE,
+            playlist TEXT,
+            position INTEGER
+        )''')
+        c.execute('''CREATE TABLE playlists (
+            name TEXT,
+            image_path TEXT,
+            id INTEGER PRIMARY KEY AUTOINCREMENT
+        )''')
+        conn.commit()
+        conn.close()
 
 def index_songs():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("DELETE FROM songs")
     if not MUSIC_DIR.exists():
-        print(f"Music directory {MUSIC_DIR} not found, no songs indexed.")
-        return
+        MUSIC_DIR.mkdir(parents=True)
+        print(f"Created music directory {MUSIC_DIR}")
     for playlist_dir in MUSIC_DIR.iterdir():
         if playlist_dir.is_dir():
             playlist_name = playlist_dir.name
@@ -60,21 +118,13 @@ def index_songs():
                 title = file.name.replace(".mp3", "").split(" - ")[0] if " - " in file.name else file.name.replace(".mp3", "")
                 artist = file.name.split(" - ")[1].replace(".mp3", "") if " - " in file.name and len(file.name.split(" - ")) > 1 else "Unknown"
                 c.execute("INSERT OR IGNORE INTO songs (title, artist, filename, playlist, position) VALUES (?, ?, ?, ?, ?)", 
-                          (title, artist, filename, playlist_name, position))
+                         (title, artist, filename, playlist_name, position))
                 print(f"Indexed: {filename} in playlist {playlist_name} at position {position}")
     conn.commit()
     conn.close()
 
 init_db()
 index_songs()
-
-@app.get("/", response_class=HTMLResponse)
-async def read_index():
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            return HTMLResponse(content=f.read(), status_code=200)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="index.html not found")
 
 @app.get("/songs")
 async def get_songs():
@@ -172,7 +222,7 @@ async def rename_playlist(playlist_id: int = Form(...), new_name: str = Form(...
                     shutil.move(str(song_file), str(target_path))
                 relative_filename = f"{new_name}/{song_file.name}"
                 c.execute("UPDATE songs SET filename = ? WHERE filename = ?", 
-                          (relative_filename, f"{old_name}/{song_file.name}"))
+                         (relative_filename, f"{old_name}/{song_file.name}"))
             try:
                 playlist_dir.rmdir()
             except OSError:
@@ -203,17 +253,18 @@ async def add_song(playlist_name: str = Form(...), youtube_url: str = Form(...))
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(youtube_url, download=True)
-            filename = ydl.prepare_filename(info).replace('.webm', '.mp3').replace('.m4a', '.mp3')
+            downloaded_file = Path(ydl.prepare_filename(info)).with_suffix('.mp3')
+            filename = f"{playlist_name}/{downloaded_file.name}"
             title = info.get('title', 'Unknown Title')
             artist = info.get('uploader', 'Unknown Artist').replace(" - Topic", "")
-            relative_filename = f"{playlist_name}/{Path(filename).name}"
+            os.rename(downloaded_file, playlist_dir / downloaded_file.name)  # Ensure file is in correct directory
 
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT MAX(position) FROM songs WHERE playlist = ?", (playlist_name,))
         max_position = c.fetchone()[0] or -1
         c.execute("INSERT INTO songs (title, artist, filename, playlist, position) VALUES (?, ?, ?, ?, ?)",
-                  (title, artist, relative_filename, playlist_name, max_position + 1))
+                  (title, artist, filename, playlist_name, max_position + 1))
         conn.commit()
         conn.close()
         return {"message": f"Added {title} to {playlist_name}"}
@@ -293,6 +344,3 @@ async def search_youtube(query: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="192.168.2.21", port=8000, reload=True)
-
-
-    #uvicorn main:app --host 192.168.2.21 --port 8000 --reload --log-level debug
