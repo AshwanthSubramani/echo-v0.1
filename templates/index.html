@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-page="index" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,10 +17,12 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarSearch">
-                <form class="d-flex ms-auto">
-                    <input id="search-input" class="form-control me-2" type="search" placeholder="Search..." aria-label="Search">
-                    <button class="btn btn-outline-success" type="button" onclick="search()"><i class="fas fa-search"></i></button>
-                </form>
+                <div class="d-flex ms-auto">
+                    <input id="search-input" class="form-control me-2" type="search" placeholder="Search..." aria-label="Search songs or playlists">
+                    <button class="btn btn-outline-success" type="button" onclick="search()" aria-label="Search">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
                 <span class="navbar-text me-3">Welcome, {{ username }}</span>
                 <a href="/logout" class="btn btn-danger">Logout</a>
             </div>
@@ -55,21 +57,29 @@
 
                 <div class="col-md-6 col-12 text-center mb-2 mb-md-0">
                     <div class="controls d-flex justify-content-center align-items-center">
-                        <button onclick="playPrevious()"><i class="fas fa-step-backward"></i></button>
-                        <button id="play-pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
-                        <button onclick="playNext()"><i class="fas fa-step-forward"></i></button>
-                        <button id="shuffle-btn" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                        <button onclick="playPrevious()" aria-label="Previous song">
+                            <i class="fas fa-step-backward"></i>
+                        </button>
+                        <button id="play-pause" onclick="togglePlayPause()" aria-label="Play or pause">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <button onclick="playNext()" aria-label="Next song">
+                            <i class="fas fa-step-forward"></i>
+                        </button>
+                        <button id="shuffle-btn" onclick="toggleShuffle()" aria-label="Toggle shuffle">
+                            <i class="fas fa-random"></i>
+                        </button>
                     </div>
                     <div class="progress-container mt-2">
                         <span id="current-time">0:00</span>
-                        <input type="range" id="progress" value="0" min="0" max="100" oninput="seek(event)">
+                        <input type="range" id="progress" value="0" min="0" max="100" oninput="seek(event)" aria-label="Seek slider">
                         <span id="duration">0:00</span>
                     </div>
                 </div>
 
                 <div class="col-md-3 col-12 text-center text-md-end">
-                    <input type="range" id="volume" value="100" min="0" max="100" oninput="setVolume()">
-                    <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#queueCollapse" aria-expanded="false" aria-controls="queueCollapse">
+                    <input type="range" id="volume" value="100" min="0" max="100" oninput="setVolume()" aria-label="Volume control">
+                    <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#queueCollapse" aria-expanded="false" aria-controls="queueCollapse" aria-label="Toggle queue">
                         <i class="fas fa-list"></i>
                     </button>
                 </div>

@@ -8,14 +8,14 @@ let playlists = [];
 let selectedPlaylist = null;
 let isShuffling = false;
 let originalQueue = [];
-let history = {}; // Tracks song play counts { songId: count }
+let history = {};
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
     audioPlayer = new Audio();
     audioPlayer.addEventListener('ended', () => {
         if (songQueue.length > 0 && currentSongIndex + 1 < songQueue.length) {
-            playNext(); // Queue has priority
+            playNext();
         } else {
             stopPlayer();
         }
@@ -179,7 +179,6 @@ function toggleShuffle() {
     console.log("Shuffle toggled:", isShuffling, "Queue:", songQueue);
 }
 
-// Helper function to generate a random integer between min and max (inclusive)
 function randomInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -187,14 +186,9 @@ function randomInt(min, max) {
 function smartShuffle(songs, currentSong = null) {
     console.log("smartShuffle called with songs:", songs, "currentSong:", currentSong);
     
-    if (songs.length === 0) {
-        console.log("Songs array is empty, returning empty array");
-        return [];
-    }
+    if (songs.length === 0) return [];
 
     let remainingSongs = songs.filter(song => song !== currentSong);
-    console.log("Remaining songs after filtering currentSong:", remainingSongs);
-
     const artistGroups = new Map();
     for (let song of remainingSongs) {
         if (!artistGroups.has(song.artist)) {
@@ -202,54 +196,36 @@ function smartShuffle(songs, currentSong = null) {
         }
         artistGroups.get(song.artist).push(song);
     }
-    console.log("Artist groups:", Array.from(artistGroups.entries()));
 
     let shuffled = [];
     let artistList = Array.from(artistGroups.keys());
-    console.log("Initial artist list:", artistList);
-
     while (artistList.length > 0) {
         const artistIndex = randomInt(0, artistList.length - 1);
         const selectedArtist = artistList[artistIndex];
-        console.log("Selected artist:", selectedArtist);
-
         const artistSongs = artistGroups.get(selectedArtist);
         const songIndex = randomInt(0, artistSongs.length - 1);
         shuffled.push(artistSongs[songIndex]);
-        console.log("Added song to shuffled:", artistSongs[songIndex]);
-
         artistSongs.splice(songIndex, 1);
-        console.log("Remaining songs for artist", selectedArtist, ":", artistSongs);
-
         if (artistSongs.length === 0) {
             artistList.splice(artistIndex, 1);
-            console.log("Artist", selectedArtist, "has no more songs. Updated artist list:", artistList);
         }
     }
 
     if (currentSong) {
         shuffled.unshift(currentSong);
-        console.log("Added currentSong to the beginning of shuffled:", currentSong);
     }
-
-    console.log("Final shuffled array:", shuffled);
     return shuffled;
 }
 
-// Helper function to shuffle an array using Fisher-Yates algorithm
 function shuffle(array) {
-    console.log("Shuffling array:", array);
     for (let i = array.length - 1; i > 0; i--) {
         const j = randomInt(0, i);
-        [array[i], array[j] = [array[j], array[i]]];
+        [array[i], array[j]] = [array[j], array[i]];
     }
-    console.log("Shuffled array:", array);
     return array;
 }
 
-// Helper function to get top N frequently played playlists from history
 function getTopPlaylists(history, count = 2) {
-    console.log("Getting top playlists from history:", history);
     const playlistCounts = {};
     for (let songId in history) {
         const song = allSongs.find(s => s.id === parseInt(songId));
@@ -257,62 +233,37 @@ function getTopPlaylists(history, count = 2) {
             playlistCounts[song.playlist] = (playlistCounts[song.playlist] || 0) + history[songId];
         }
     }
-    console.log("Playlist counts:", playlistCounts);
-
-    const sortedPlaylists = Object.entries(playlistCounts)
+    return Object.entries(playlistCounts)
         .sort((a, b) => b[1] - a[1])
         .slice(0, count)
         .map(entry => entry[0]);
-    console.log("Top", count, "playlists:", sortedPlaylists);
-    return sortedPlaylists;
 }
 
-// Function to update listening history when a song plays
 function updateHistory() {
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const songId = songQueue[currentSongIndex].id;
         history[songId] = (history[songId] || 0) + 1;
-        console.log("Updated history:", history);
     }
 }
 
-// Function to recommend songs based on current song and history
 function recommendSongs(currentSong, allSongs, history, count = 5) {
-    console.log("Recommending songs for currentSong:", currentSong, "count:", count);
-
-    // Get similar songs from the same artist
     const sameArtist = allSongs.filter(song =>
         song.artist === currentSong.artist && song.id !== currentSong.id
     );
-    console.log("Songs from same artist:", sameArtist);
-
-    // Get songs from frequently played playlists
     const frequentPlaylists = getTopPlaylists(history, 2);
     const playlistSongs = allSongs.filter(song =>
         frequentPlaylists.includes(song.playlist) && song.id !== currentSong.id
     );
-    console.log("Songs from frequent playlists:", playlistSongs);
-
-    // Combine and deduplicate using a Set
     let recommendations = new Set([...sameArtist, ...playlistSongs]);
-    console.log("Initial recommendations:", Array.from(recommendations));
-
-    // Fallback to random if not enough
     if (recommendations.size < count) {
         const remaining = allSongs.filter(song =>
             !recommendations.has(song) && song.id !== currentSong.id
         );
-        console.log("Remaining songs for random selection:", remaining);
         shuffle(remaining);
         const additionalSongs = remaining.slice(0, count - recommendations.size);
-        console.log("Additional random songs:", additionalSongs);
         additionalSongs.forEach(song => recommendations.add(song));
     }
-
-    // Return the requested number of recommendations
-    const result = Array.from(recommendations).slice(0, count);
-    console.log("Final recommendations:", result);
-    return result;
+    return Array.from(recommendations).slice(0, count);
 }
 
 function playPlaylist(playlistName) {
@@ -327,12 +278,15 @@ function playPlaylist(playlistName) {
     }
     playNext();
     renderQueue();
-    console.log("Playing playlist:", playlistName, "Queue:", songQueue);
 }
 
 function renderQueue() {
     console.log("renderQueue called");
     const queueList = document.getElementById('queue-list');
+    if (!queueList) {
+        console.log("Queue list container not found, skipping renderQueue");
+        return;
+    }
     queueList.innerHTML = '<h3>Queue</h3>';
     if (songQueue.length === 0) {
         queueList.innerHTML += '<p>No songs in queue.</p>';
@@ -348,9 +302,6 @@ function renderQueue() {
             queueList.appendChild(queueItem);
         });
     }
-    // Ensure the queue collapse is updated
-    const queueCollapse = new bootstrap.Collapse(document.getElementById('queueCollapse'));
-    if (songQueue.length > 0) queueCollapse.show();
 }
 
 function clearQueue() {
@@ -373,7 +324,6 @@ function clearQueue() {
 
     renderQueue();
     updatePlayerUI();
-    console.log("Queue cleared. Current song:", currentSong, "Queue:", songQueue);
 }
 
 function showEditPlaylistPopup(playlistId, playlistName) {
@@ -478,6 +428,10 @@ function showPlaylistSongs(playlistName) {
     selectedPlaylist = playlistName;
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
     const songList = document.getElementById('song-list');
+    if (!songList) {
+        console.log("Song list container not found, skipping showPlaylistSongs");
+        return;
+    }
     songList.innerHTML = `
         <div class="card-body">
             <div class="playlist-header">
@@ -632,6 +586,10 @@ function updatePlayerUI() {
     console.log("songQueue:", songQueue, "currentSongIndex:", currentSongIndex);
     const playerInfo = document.getElementById('player-info');
     const playerControls = document.querySelector('.player-controls');
+    if (!playerInfo || !playerControls) {
+        console.log("Player UI elements not found, skipping updatePlayerUI");
+        return;
+    }
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const currentSong = songQueue[currentSongIndex];
         console.log("Current song:", currentSong);
@@ -645,12 +603,16 @@ function updatePlayerUI() {
 
 function renderPlaylists() {
     console.log("renderPlaylists called");
+    const playlistContainer = document.getElementById('playlists');
+    if (!playlistContainer) {
+        console.log("Playlist container not found, skipping renderPlaylists");
+        return;
+    }
     fetch('/playlists')
         .then(response => response.json())
         .then(data => {
             playlists = data.playlists;
             console.log("Playlists:", playlists);
-            const playlistContainer = document.getElementById('playlists');
             playlistContainer.innerHTML = `
                 <div class="card-body">
                     <h2>Playlists</h2>
@@ -685,8 +647,12 @@ function renderPlaylists() {
 
 function showMainPage() {
     console.log("showMainPage called");
-    selectedPlaylist = null;
     const songList = document.getElementById('song-list');
+    if (!songList) {
+        console.log("Song list container not found, skipping showMainPage");
+        return;
+    }
+    selectedPlaylist = null;
     songList.innerHTML = `
         <div class="card-body">
             <h2>Songs</h2>
@@ -702,7 +668,12 @@ function showMainPage() {
 
 function search() {
     console.log("search called");
-    const query = document.getElementById('search-input').value.trim().toLowerCase();
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) {
+        console.log("Search input not found, skipping search");
+        return;
+    }
+    const query = searchInput.value.trim().toLowerCase();
     if (!query) {
         showMainPage();
         return;
@@ -717,6 +688,10 @@ function search() {
         .then(response => response.json())
         .then(youtubeData => {
             const songList = document.getElementById('song-list');
+            if (!songList) {
+                console.log("Song list container not found, skipping search rendering");
+                return;
+            }
             songList.innerHTML = '<div class="card-body"><h2>Search Results</h2>';
 
             if (matchingPlaylists.length > 0) {
@@ -776,6 +751,10 @@ function showRecommendations() {
         const currentSong = songQueue[currentSongIndex];
         const recommendations = recommendSongs(currentSong, allSongs, history);
         const queueList = document.getElementById('queue-list');
+        if (!queueList) {
+            console.log("Queue list container not found, skipping showRecommendations");
+            return;
+        }
         queueList.innerHTML = '<h3>Recommendations</h3>';
         recommendations.forEach((song, index) => {
             const queueItem = document.createElement('div');
@@ -793,51 +772,74 @@ function showRecommendations() {
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
+
+    // Determine the current page
+    const page = document.documentElement.getAttribute('data-page');
+    console.log("Current page:", page);
+
+    // Initialize audio player on all pages
     initAudioPlayer();
 
-    // Login and Signup form handling
-    const loginForm = document.getElementById('login-form');
-    const signupForm = document.getElementById('signup-form');
+    // Handle login page logic
+    if (page === 'login') {
+        const loginForm = document.getElementById('login-form');
+        console.log("Login form element:", loginForm);
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const gmail = document.getElementById('login-gmail').value;
-            const password = document.getElementById('login-password').value;
-            const response = await fetch('/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `gmail=${encodeURIComponent(gmail)}&password=${encodeURIComponent(password)}`
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const gmail = document.getElementById('login-gmail').value;
+                const password = document.getElementById('login-password').value;
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `gmail=${encodeURIComponent(gmail)}&password=${encodeURIComponent(password)}`
+                });
+                console.log('Login response status:', response.status);
+                if (response.status === 303) {
+                    console.log('Redirecting to /index.html');
+                    window.location.href = '/index.html';
+                } else {
+                    const errorData = await response.json();
+                    console.log('Login failed with response:', errorData);
+                    alert('Login failed: ' + (errorData.message || 'Unknown error'));
+                }
             });
-            if (response.status === 303) {
-                window.location.href = '/index.html';
-            } else {
-                alert('Login failed');
-            }
-        });
+        }
     }
 
-    if (signupForm) {
-        signupForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const gmail = document.getElementById('signup-gmail').value;
-            const username = document.getElementById('signup-username').value;
-            const password = document.getElementById('signup-password').value;
-            const response = await fetch('/signup', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `gmail=${encodeURIComponent(gmail)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+    // Handle signup page logic
+    if (page === 'signup') {
+        const signupForm = document.getElementById('signup-form');
+        console.log("Signup form element:", signupForm);
+
+        if (signupForm) {
+            signupForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const gmail = document.getElementById('signup-gmail').value;
+                const username = document.getElementById('signup-username').value;
+                const password = document.getElementById('signup-password').value;
+                const response = await fetch('/signup', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `gmail=${encodeURIComponent(gmail)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+                });
+                console.log('Signup response status:', response.status);
+                if (response.status === 303) {
+                    console.log('Redirecting to /index.html');
+                    window.location.href = '/index.html';
+                } else {
+                    const errorData = await response.json();
+                    console.log('Signup failed with response:', errorData);
+                    alert('Signup failed: ' + (errorData.message || 'Unknown error'));
+                }
             });
-            if (response.status === 303) {
-                window.location.href = '/index.html';
-            } else {
-                alert('Signup failed');
-            }
-        });
+        }
     }
 
-    // Initialize playlists and songs only on index.html
-    if (document.getElementById('playlists')) {
+    // Handle index page logic
+    if (page === 'index') {
+        console.log("Initializing index.html logic");
         renderPlaylists();
         fetch('/songs')
             .then(response => response.json())
@@ -849,120 +851,121 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(error => console.error("Error fetching songs:", error));
 
-        // Add Enter key event listener for search
-        document.getElementById('search-input').addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                search();
-            }
-        });
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    search();
+                }
+            });
+        }
 
-        // Add recommendation button to player controls
         const controls = document.querySelector('.controls');
-        const recommendBtn = document.createElement('button');
-        recommendBtn.id = 'recommend-btn';
-        recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
-        recommendBtn.onclick = showRecommendations;
-        controls.appendChild(recommendBtn);
-    }
+        if (controls) {
+            const recommendBtn = document.createElement('button');
+            recommendBtn.id = 'recommend-btn';
+            recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
+            recommendBtn.onclick = showRecommendations;
+            controls.appendChild(recommendBtn);
+        }
 
-    // Queue resizing logic
-    const queueResizeHandle = document.getElementById('queue-resize-handle');
-    const queueCollapse = document.getElementById('queueCollapse');
-    let isQueueDragging = false;
+        const queueResizeHandle = document.getElementById('queue-resize-handle');
+        const queueCollapse = document.getElementById('queueCollapse');
+        let isQueueDragging = false;
 
-    if (queueResizeHandle) {
-        queueResizeHandle.addEventListener('mousedown', (e) => {
-            isQueueDragging = true;
-            document.addEventListener('mousemove', onQueueMouseMove);
-            document.addEventListener('mouseup', onQueueMouseUp);
-        });
+        if (queueResizeHandle && queueCollapse) {
+            queueResizeHandle.addEventListener('mousedown', (e) => {
+                isQueueDragging = true;
+                document.addEventListener('mousemove', onQueueMouseMove);
+                document.addEventListener('mouseup', onQueueMouseUp);
+            });
 
-        queueResizeHandle.addEventListener('touchstart', (e) => {
-            isQueueDragging = true;
-            document.addEventListener('touchmove', onQueueTouchMove);
-            document.addEventListener('touchend', onQueueTouchEnd);
-        });
-    }
+            queueResizeHandle.addEventListener('touchstart', (e) => {
+                isQueueDragging = true;
+                document.addEventListener('touchmove', onQueueTouchMove);
+                document.addEventListener('touchend', onQueueTouchEnd);
+            });
+        }
 
-    function onQueueMouseMove(e) {
-        if (!isQueueDragging) return;
+        function onQueueMouseMove(e) {
+            if (!isQueueDragging) return;
+            const playerControls = document.querySelector('.player-controls');
+            const playerRect = playerControls.getBoundingClientRect();
+            const newHeight = window.innerHeight - e.clientY - playerRect.height + queueCollapse.scrollHeight;
+            const minHeight = 100;
+            const maxHeight = 400;
+            queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+        }
+
+        function onQueueTouchMove(e) {
+            if (!isQueueDragging) return;
+            const touch = e.touches[0];
+            const playerControls = document.querySelector('.player-controls');
+            const playerRect = playerControls.getBoundingClientRect();
+            const newHeight = window.innerHeight - touch.clientY - playerRect.height + queueCollapse.scrollHeight;
+            const minHeight = 100;
+            const maxHeight = 400;
+            queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+        }
+
+        function onQueueMouseUp() {
+            isQueueDragging = false;
+            document.removeEventListener('mousemove', onQueueMouseMove);
+            document.removeEventListener('mouseup', onQueueMouseUp);
+        }
+
+        function onQueueTouchEnd() {
+            isQueueDragging = false;
+            document.removeEventListener('touchmove', onQueueTouchMove);
+            document.removeEventListener('touchend', onQueueTouchEnd);
+        }
+
+        const playerResizeHandle = document.getElementById('player-resize-handle');
         const playerControls = document.querySelector('.player-controls');
-        const playerRect = playerControls.getBoundingClientRect();
-        const newHeight = window.innerHeight - e.clientY - playerRect.height + queueCollapse.scrollHeight;
-        const minHeight = 100; // Minimum height
-        const maxHeight = 400; // Maximum height
-        queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-    }
+        let isPlayerDragging = false;
 
-    function onQueueTouchMove(e) {
-        if (!isQueueDragging) return;
-        const touch = e.touches[0];
-        const playerControls = document.querySelector('.player-controls');
-        const playerRect = playerControls.getBoundingClientRect();
-        const newHeight = window.innerHeight - touch.clientY - playerRect.height + queueCollapse.scrollHeight;
-        const minHeight = 100; // Minimum height
-        const maxHeight = 400; // Maximum height
-        queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-    }
+        if (playerResizeHandle && playerControls) {
+            playerResizeHandle.addEventListener('mousedown', (e) => {
+                isPlayerDragging = true;
+                document.addEventListener('mousemove', onPlayerMouseMove);
+                document.addEventListener('mouseup', onPlayerMouseUp);
+            });
 
-    function onQueueMouseUp() {
-        isQueueDragging = false;
-        document.removeEventListener('mousemove', onQueueMouseMove);
-        document.removeEventListener('mouseup', onQueueMouseUp);
-    }
+            playerResizeHandle.addEventListener('touchstart', (e) => {
+                isPlayerDragging = true;
+                document.addEventListener('touchmove', onPlayerTouchMove);
+                document.addEventListener('touchend', onPlayerTouchEnd);
+            });
+        }
 
-    function onQueueTouchEnd() {
-        isQueueDragging = false;
-        document.removeEventListener('touchmove', onQueueTouchMove);
-        document.removeEventListener('touchend', onQueueTouchEnd);
-    }
+        function onPlayerMouseMove(e) {
+            if (!isPlayerDragging) return;
+            const newHeight = window.innerHeight - e.clientY;
+            const minHeight = 80;
+            const maxHeight = 300;
+            playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+        }
 
-    // Player resizing logic
-    const playerResizeHandle = document.getElementById('player-resize-handle');
-    const playerControls = document.querySelector('.player-controls');
-    let isPlayerDragging = false;
+        function onPlayerTouchMove(e) {
+            if (!isPlayerDragging) return;
+            const touch = e.touches[0];
+            const newHeight = window.innerHeight - touch.clientY;
+            const minHeight = 80;
+            const maxHeight = 300;
+            playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+        }
 
-    if (playerResizeHandle) {
-        playerResizeHandle.addEventListener('mousedown', (e) => {
-            isPlayerDragging = true;
-            document.addEventListener('mousemove', onPlayerMouseMove);
-            document.addEventListener('mouseup', onPlayerMouseUp);
-        });
+        function onPlayerMouseUp() {
+            isPlayerDragging = false;
+            document.removeEventListener('mousemove', onPlayerMouseMove);
+            document.removeEventListener('mouseup', onPlayerMouseUp);
+        }
 
-        playerResizeHandle.addEventListener('touchstart', (e) => {
-            isPlayerDragging = true;
-            document.addEventListener('touchmove', onPlayerTouchMove);
-            document.addEventListener('touchend', onPlayerTouchEnd);
-        });
-    }
-
-    function onPlayerMouseMove(e) {
-        if (!isPlayerDragging) return;
-        const newHeight = window.innerHeight - e.clientY;
-        const minHeight = 80; // Minimum height
-        const maxHeight = 300; // Maximum height
-        playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-    }
-
-    function onPlayerTouchMove(e) {
-        if (!isPlayerDragging) return;
-        const touch = e.touches[0];
-        const newHeight = window.innerHeight - touch.clientY;
-        const minHeight = 80; // Minimum height
-        const maxHeight = 300; // Maximum height
-        playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-    }
-
-    function onPlayerMouseUp() {
-        isPlayerDragging = false;
-        document.removeEventListener('mousemove', onPlayerMouseMove);
-        document.removeEventListener('mouseup', onPlayerMouseUp);
-    }
-
-    function onPlayerTouchEnd() {
-        isPlayerDragging = false;
-        document.removeEventListener('touchmove', onPlayerTouchMove);
-        document.removeEventListener('touchend', onPlayerTouchEnd);
+        function onPlayerTouchEnd() {
+            isPlayerDragging = false;
+            document.removeEventListener('touchmove', onPlayerTouchMove);
+            document.removeEventListener('touchend', onPlayerTouchEnd);
+        }
     }
 });
 
