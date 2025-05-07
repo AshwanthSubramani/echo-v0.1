@@ -831,6 +831,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', onQueueMouseUp);
     });
 
+    queueResizeHandle.addEventListener('touchstart', (e) => {
+        isQueueDragging = true;
+        document.addEventListener('touchmove', onQueueTouchMove);
+        document.addEventListener('touchend', onQueueTouchEnd);
+    });
+
     function onQueueMouseMove(e) {
         if (!isQueueDragging) return;
         const playerControls = document.querySelector('.player-controls');
@@ -841,10 +847,27 @@ document.addEventListener('DOMContentLoaded', () => {
         queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
     }
 
+    function onQueueTouchMove(e) {
+        if (!isQueueDragging) return;
+        const touch = e.touches[0];
+        const playerControls = document.querySelector('.player-controls');
+        const playerRect = playerControls.getBoundingClientRect();
+        const newHeight = window.innerHeight - touch.clientY - playerRect.height + queueCollapse.scrollHeight;
+        const minHeight = 100; // Minimum height
+        const maxHeight = 400; // Maximum height
+        queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+    }
+
     function onQueueMouseUp() {
         isQueueDragging = false;
         document.removeEventListener('mousemove', onQueueMouseMove);
         document.removeEventListener('mouseup', onQueueMouseUp);
+    }
+
+    function onQueueTouchEnd() {
+        isQueueDragging = false;
+        document.removeEventListener('touchmove', onQueueTouchMove);
+        document.removeEventListener('touchend', onQueueTouchEnd);
     }
 
     // Player resizing logic
@@ -858,9 +881,24 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('mouseup', onPlayerMouseUp);
     });
 
+    playerResizeHandle.addEventListener('touchstart', (e) => {
+        isPlayerDragging = true;
+        document.addEventListener('touchmove', onPlayerTouchMove);
+        document.addEventListener('touchend', onPlayerTouchEnd);
+    });
+
     function onPlayerMouseMove(e) {
         if (!isPlayerDragging) return;
         const newHeight = window.innerHeight - e.clientY;
+        const minHeight = 80; // Minimum height
+        const maxHeight = 300; // Maximum height
+        playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
+    }
+
+    function onPlayerTouchMove(e) {
+        if (!isPlayerDragging) return;
+        const touch = e.touches[0];
+        const newHeight = window.innerHeight - touch.clientY;
         const minHeight = 80; // Minimum height
         const maxHeight = 300; // Maximum height
         playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
@@ -870,6 +908,12 @@ document.addEventListener('DOMContentLoaded', () => {
         isPlayerDragging = false;
         document.removeEventListener('mousemove', onPlayerMouseMove);
         document.removeEventListener('mouseup', onPlayerMouseUp);
+    }
+
+    function onPlayerTouchEnd() {
+        isPlayerDragging = false;
+        document.removeEventListener('touchmove', onPlayerTouchMove);
+        document.removeEventListener('touchend', onPlayerTouchEnd);
     }
 });
 

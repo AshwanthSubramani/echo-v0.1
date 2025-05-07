@@ -293,3 +293,6 @@ async def search_youtube(query: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="192.168.2.21", port=8000, reload=True)
+
+
+    #uvicorn main:app --host 192.168.2.21 --port 8000 --reload --log-level debug
