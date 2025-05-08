@@ -12,8 +12,13 @@ let history = {};
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
-    audioPlayer = new Audio();
+    audioPlayer = document.getElementById('audio-player');
+    if (!audioPlayer) {
+        console.error("Audio player element not found!");
+        return;
+    }
     audioPlayer.addEventListener('ended', () => {
+        console.log("Audio ended event triggered");
         if (songQueue.length > 0 && currentSongIndex + 1 < songQueue.length) {
             playNext();
         } else {
@@ -28,19 +33,38 @@ function initAudioPlayer() {
         playNext();
     });
     audioPlayer.addEventListener('loadeddata', () => {
-        console.log("Audio loadeddata event");
-        audioPlayer.play();
-        updateHistory();
+        console.log("Audio loadeddata event, duration:", audioPlayer.duration);
+        audioPlayer.play().catch(e => console.error("Play failed:", e));
+        updateProgress();
         updatePlayerUI();
     });
+    audioPlayer.addEventListener('timeupdate', updateProgress);
     audioPlayer.addEventListener('play', () => {
-        const audioElement = document.getElementById('audio-player');
-        if (audioElement) audioElement.play();
+        const playPause = document.getElementById('play-pause');
+        if (playPause) playPause.innerHTML = '<i class="fas fa-pause"></i>';
     });
     audioPlayer.addEventListener('pause', () => {
-        const audioElement = document.getElementById('audio-player');
-        if (audioElement) audioElement.pause();
+        const playPause = document.getElementById('play-pause');
+        if (playPause) playPause.innerHTML = '<i class="fas fa-play"></i>';
     });
+}
+
+function updateProgress() {
+    const progress = document.getElementById('progress');
+    const currentTime = document.getElementById('current-time');
+    const duration = document.getElementById('duration');
+    if (progress && currentTime && duration && audioPlayer.duration) {
+        const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progress.value = isNaN(percent) ? 0 : percent;
+        currentTime.textContent = formatTime(audioPlayer.currentTime);
+        duration.textContent = formatTime(audioPlayer.duration);
+    }
+}
+
+function formatTime(seconds) {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
 async function playSong(songId) {
@@ -48,8 +72,10 @@ async function playSong(songId) {
     const song = allSongs.find(s => s.id === parseInt(songId));
     if (!song) {
         console.log("Song not found for songId:", songId);
+        alert("Song not found!");
         return;
     }
+    console.log("Found song:", song);
 
     const playlistSongs = allSongs.filter(s => s.playlist === song.playlist).sort((a, b) => a.position - b.position);
     songQueue = playlistSongs;
@@ -59,8 +85,16 @@ async function playSong(songId) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
     }
+    console.log("Setting audio src to:", song.url);
     audioPlayer.src = song.url;
-    audioPlayer.load();
+    try {
+        await audioPlayer.load();
+        console.log("Audio loaded successfully");
+        audioPlayer.play();
+    } catch (e) {
+        console.error("Failed to load or play audio:", e);
+        alert("Failed to play song: " + e.message);
+    }
     updatePlayerUI();
     console.log("Playing song:", song, "Queue:", songQueue, "Index:", currentSongIndex);
 }
@@ -120,13 +154,31 @@ function stopPlayer() {
     songQueue = [];
     originalQueue = [];
     currentSongIndex = -1;
+    updatePlayerUI();
+    updateProgress();
     console.log("Player stopped");
 }
 
 function togglePlayPause() {
     console.log("togglePlayPause called");
-    if (audioPlayer.paused) audioPlayer.play();
-    else audioPlayer.pause();
+    if (audioPlayer.paused) {
+        audioPlayer.play().catch(e => console.error("Play failed:", e));
+    } else {
+        audioPlayer.pause();
+    }
+}
+
+function seek(event) {
+    const progress = document.getElementById('progress');
+    if (progress && audioPlayer.duration) {
+        const seekPosition = (event.target.value / 100) * audioPlayer.duration;
+        audioPlayer.currentTime = seekPosition;
+    }
+}
+
+function setVolume() {
+    const volume = document.getElementById('volume');
+    if (volume) audioPlayer.volume = volume.value / 100;
 }
 
 function toggleShuffle() {
@@ -148,6 +200,7 @@ function toggleShuffle() {
             currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
         }
     }
+    updatePlayerUI();
     console.log("Shuffle toggled:", isShuffling, "Queue:", songQueue);
 }
 
@@ -240,18 +293,28 @@ function showEditPlaylistPopup(playlistId, playlistName) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showPlaylistSongs('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-arrow-left"></i> Back</button>
@@ -340,22 +403,32 @@ function showPlaylistSongs(playlistName) {
     console.log("showPlaylistSongs called with:", playlistName);
     selectedPlaylist = playlistName;
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
-    const contentArea = document.getElementById('content-area');
     const playlist = playlists.find(p => p.name === playlistName);
+    const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showPlaylistsView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -382,18 +455,28 @@ function createPlaylist() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -426,18 +509,28 @@ function addSong() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -474,18 +567,28 @@ function showPlaylistsView() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -506,18 +609,28 @@ function showSearchSongsView() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -556,18 +669,28 @@ function addSearchedSong(youtubeUrl) {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -583,64 +706,60 @@ function addSearchedSong(youtubeUrl) {
     `;
 }
 
-function showQueueList() {
-    console.log("showQueueList called");
+function showQueueView() {
+    console.log("showQueueView called");
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
             </div>
-        </div>
-        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
-        <div class="queue-list">
-            <h2>Queue</h2>
-            <div id="queue-list">
-                ${songQueue.length === 0 ? '<p>No songs in queue.</p>' : songQueue.map((song, index) => `
-                    <div class="queue-item ${index === currentSongIndex ? 'current' : ''}" draggable="true" data-id="${song.id}" data-index="${index}">
-                        <i class="far fa-waveform"></i>
-                        <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
-                    </div>
-                `).join('')}
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Queue</h2>
+        <div class="queue-list" id="queue-container">
+            ${songQueue.length === 0 ? '<p>No songs in queue.</p>' : songQueue.map((song, index) => `
+                <div class="queue-item" draggable="true" data-id="${song.id}" data-index="${index}">
+                    <i class="far fa-waveform"></i>
+                    <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
+                    <button onclick="removeFromQueue(${index})"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('')}
+        </div>
     `;
-    makeQueueSortable();
+    makeSortable();
 }
 
-function makeQueueSortable() {
-    console.log("makeQueueSortable called");
-    const queueList = document.getElementById('queue-list');
-    if (!queueList) return;
-    new Sortable(queueList, {
-        animation: 150,
-        onEnd: (evt) => {
-            const oldIndex = evt.oldIndex;
-            const newIndex = evt.newIndex;
-            if (oldIndex === newIndex) return;
-            const movedSong = songQueue.splice(oldIndex, 1)[0];
-            songQueue.splice(newIndex, 0, movedSong);
-            if (currentSongIndex === oldIndex) {
-                currentSongIndex = newIndex;
-            } else if (oldIndex < currentSongIndex && newIndex >= currentSongIndex) {
-                currentSongIndex--;
-            } else if (oldIndex > currentSongIndex && newIndex <= currentSongIndex) {
-                currentSongIndex++;
-            }
-            showQueueList();
-            console.log("Queue reordered:", songQueue, "Current index:", currentSongIndex);
-        }
-    });
+function removeFromQueue(index) {
+    console.log("removeFromQueue called with index:", index);
+    if (index === currentSongIndex) {
+        stopPlayer();
+    } else if (index < currentSongIndex) {
+        currentSongIndex--;
+    }
+    songQueue.splice(index, 1);
+    originalQueue = [...songQueue];
+    showQueueView();
 }
 
 function deletePlaylist(playlistId) {
@@ -680,23 +799,38 @@ function deleteSong(songId) {
 
 function makeSortable() {
     console.log("makeSortable called");
-    const sortableList = document.getElementById('songs-container');
+    const sortableList = document.getElementById('songs-container') || document.getElementById('queue-container');
     if (!sortableList) return;
     new Sortable(sortableList, {
         animation: 150,
         onEnd: (evt) => {
-            const songIds = Array.from(sortableList.children).map(item => item.dataset.id);
-            fetch('/rearrange_playlist', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log(data.message);
-                fetchSongs();
-            })
-            .catch(error => console.error("Error rearranging playlist:", error));
+            const items = Array.from(sortableList.children);
+            const newOrder = items.map((item, index) => ({
+                id: item.dataset.id,
+                index: parseInt(item.dataset.index) || index
+            }));
+
+            if (sortableList.id === 'songs-container' && selectedPlaylist) {
+                const songIds = newOrder.map(item => item.id);
+                fetch('/rearrange_playlist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.message);
+                    fetchSongs();
+                })
+                .catch(error => console.error("Error rearranging playlist:", error));
+            } else if (sortableList.id === 'queue-container') {
+                songQueue = newOrder.sort((a, b) => a.index - b.index).map(item => 
+                    allSongs.find(s => s.id === parseInt(item.id))
+                );
+                currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
+                originalQueue = [...songQueue];
+                showQueueView();
+            }
         }
     });
 }
@@ -706,7 +840,13 @@ function fetchSongs() {
     fetch('/songs')
         .then(response => response.json())
         .then(data => {
-            allSongs = data.songs;
+            allSongs = data.songs.map(song => {
+                console.log("Fetched song:", song);
+                if (!song.url) {
+                    console.warn("Song missing URL:", song);
+                }
+                return song;
+            });
             console.log("Updated songs:", allSongs);
             if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
             else displaySongs();
@@ -770,6 +910,10 @@ function displaySongs() {
                 <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                 <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
             `;
+            songItem.addEventListener('dragstart', handleDragStart);
+            songItem.addEventListener('dragover', handleDragOver);
+            songItem.addEventListener('drop', handleDrop);
+            songItem.addEventListener('dragend', handleDragEnd);
             container.appendChild(songItem);
         });
     }
@@ -782,18 +926,28 @@ function showMainView() {
     const contentArea = document.getElementById('content-area');
     contentArea.innerHTML = `
         <div class="control-panel">
-            <div class="player-controls">
-                <button id="previous-btn" title="Previous Song" onclick="playPrevious()"><i class="fas fa-backward"></i></button>
-                <audio id="audio-player" controls>
-                    <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
-                    Your browser does not support the audio element.
-                </audio>
-                <button id="next-btn" title="Next Song" onclick="playNext()"><i class="fas fa-forward"></i></button>
-                <button id="shuffle-btn" title="Shuffle" onclick="toggleShuffle()" class="${isShuffling ? 'active' : ''}"><i class="fas fa-random"></i></button>
-            </div>
+            <audio id="audio-player">
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
             <div class="song-info">
                 <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
                 <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+            <div class="player-controls">
+                <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
+                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+            </div>
+            <div class="player-progress">
+                <span id="current-time">0:00</span>
+                <input type="range" id="progress" min="0" max="100" value="0">
+                <span id="duration">0:00</span>
+            </div>
+            <div class="player-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" id="volume" min="0" max="100" value="100">
             </div>
         </div>
         <div class="playlists">
@@ -824,29 +978,66 @@ function updatePlayerUI() {
     }
 }
 
-function setupResizeHandle() {
-    const resizeHandle = document.querySelector('.resize-handle');
-    const musicmox = document.querySelector('.musicmox');
-    let isResizing = false;
+function handleDragStart(event) {
+    event.dataTransfer.setData('text/plain', event.target.dataset.id);
+}
 
-    resizeHandle.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        document.addEventListener('mousemove', resize);
-        document.addEventListener('mouseup', stopResize);
-    });
+function handleDragOver(event) {
+    event.preventDefault();
+}
 
-    function resize(e) {
-        if (!isResizing) return;
-        const newWidth = e.clientX - musicmox.getBoundingClientRect().left + 10;
-        const newHeight = e.clientY - musicmox.getBoundingClientRect().top + 10;
-        musicmox.style.width = Math.max(600, Math.min(1000, newWidth)) + 'px';
-        musicmox.style.height = Math.max(450, Math.min(800, newHeight)) + 'px';
+function handleDrop(event) {
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData('text');
+    const droppedOn = event.target.closest('.song-item') || event.target.closest('.queue-item');
+    if (!droppedOn || draggedId === droppedOn.dataset.id) return;
+
+    const container = droppedOn.parentNode;
+    const allItems = Array.from(container.children);
+    const draggedIndex = allItems.findIndex(item => item.dataset.id === draggedId);
+    const droppedIndex = allItems.indexOf(droppedOn);
+
+    if (draggedIndex < droppedIndex) {
+        container.insertBefore(allItems[draggedIndex], droppedOn.nextSibling);
+    } else {
+        container.insertBefore(allItems[draggedIndex], droppedOn);
     }
+    updateSongOrder(container.id);
+}
 
-    function stopResize() {
-        isResizing = false;
-        document.removeEventListener('mousemove', resize);
-        document.removeEventListener('mouseup', stopResize);
+function handleDragEnd() {
+    // Cleanup if needed
+}
+
+function updateSongOrder(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const items = Array.from(container.children);
+    const newOrder = items.map((item, index) => ({
+        id: item.dataset.id,
+        index: parseInt(item.dataset.index) || index
+    }));
+
+    if (containerId === 'songs-container' && selectedPlaylist) {
+        const songIds = newOrder.map(item => item.id);
+        fetch('/rearrange_playlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.message);
+            fetchSongs();
+        })
+        .catch(error => console.error("Error rearranging playlist:", error));
+    } else if (containerId === 'queue-container') {
+        songQueue = newOrder.sort((a, b) => a.index - b.index).map(item => 
+            allSongs.find(s => s.id === parseInt(item.id))
+        );
+        currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
+        originalQueue = [...songQueue];
+        showQueueView();
     }
 }
 
@@ -856,13 +1047,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initAudioPlayer();
     fetchSongs();
     fetchPlaylists();
-    setupResizeHandle();
 
     document.getElementById('show-playlists-btn').addEventListener('click', showPlaylistsView);
     document.getElementById('search-songs-btn').addEventListener('click', showSearchSongsView);
     document.getElementById('add-song-btn').addEventListener('click', addSong);
     document.getElementById('create-playlist-btn').addEventListener('click', createPlaylist);
-    document.getElementById('queue-list-btn').addEventListener('click', showQueueList);
+    document.getElementById('queue-list-btn').addEventListener('click', showQueueView);
+    document.getElementById('previous-btn').addEventListener('click', playPrevious);
+    document.getElementById('next-btn').addEventListener('click', playNext);
+    document.getElementById('progress').addEventListener('input', seek);
+    document.getElementById('volume').addEventListener('input', setVolume);
 
     document.addEventListener('submit', (event) => {
         if (event.target.id === 'create-playlist-form') handleCreatePlaylist(event);

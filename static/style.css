@@ -15,6 +15,7 @@ body {
     margin: auto;
     border: 20px solid #080808;
     outline: 1px solid #111;
+    overflow: hidden;
     transition: all ease-in-out 1s;
 }
 
@@ -84,12 +85,7 @@ body {
     position: relative;
     bottom: -520px;
     transition: all ease-in-out 0.8s;
-    resize: both;
-    overflow: hidden;
-    min-width: 600px;
-    min-height: 450px;
-    max-width: 1000px;
-    max-height: 800px;
+    overflow-y: auto;
 }
 
 .moxybaul:hover .musicmox {
@@ -98,66 +94,90 @@ body {
     transition-delay: 0.8s;
 }
 
-.resize-handle {
-    width: 15px;
-    height: 15px;
-    background: #5c4763;
-    position: absolute;
-    bottom: 0;
-    right: 0;
-    cursor: se-resize;
-}
-
 .control-panel {
     width: 100%;
-    text-align: center;
+    background: rgba(40, 40, 40, 0.8);
+    border-radius: 10px;
+    padding: 15px;
     margin-bottom: 20px;
-}
-
-.player-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 #audio-player {
-    width: 70%;
-    background: rgba(0, 0, 0, 0.4);
-    border: none;
-    color: #ccc;
-}
-
-#previous-btn,
-#next-btn,
-#shuffle-btn {
-    background: none;
-    border: none;
-    color: #5c4763;
-    font-size: 16px;
-    cursor: pointer;
-    transition: all ease-in-out 0.3s;
-}
-
-#previous-btn:hover,
-#next-btn:hover,
-#shuffle-btn:hover {
-    color: #ccc;
-}
-
-#shuffle-btn.active {
-    color: #ccc;
+    display: none; /* Hidden, controlled by JS */
 }
 
 .song-info {
     color: #ccc;
+    font-size: 14px;
+    margin: 10px 0;
+    font-weight: 700;
+}
+
+.player-controls {
+    margin: 10px 0;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.player-controls button {
+    background: #5c4763;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    color: #ccc;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.player-controls button:hover {
+    background: #ccc;
+    color: #5c4763;
+}
+
+.player-controls button#shuffle-btn.active {
+    background: #4a3f50;
+}
+
+.player-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ccc;
     font-size: 12px;
+}
+
+#progress {
+    width: 100%;
+    accent-color: #5c4763;
+    cursor: pointer;
+}
+
+.player-volume {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     margin-top: 10px;
+    color: #ccc;
+    font-size: 14px;
+}
+
+#volume {
+    width: 100px;
+    accent-color: #5c4763;
+    cursor: pointer;
 }
 
 .playlists h2,
 .songs h2,
-.queue-list h2 {
+.queue h2 {
     color: #5c4763;
     font-size: 14px;
     width: 100%;
@@ -180,6 +200,7 @@ body {
     text-align: center;
     cursor: pointer;
     transition: all ease-in-out 0.3s;
+    border-radius: 5px;
 }
 
 .playlist-item:hover {
@@ -191,6 +212,7 @@ body {
     height: 100px;
     object-fit: cover;
     border: 2px solid #222;
+    border-radius: 5px;
 }
 
 .playlist-item p {
@@ -199,7 +221,8 @@ body {
     font-size: 10px;
 }
 
-.song-list {
+.song-list,
+.queue-list {
     width: 100%;
 }
 
@@ -214,6 +237,7 @@ body {
     margin-bottom: 5px;
     cursor: pointer;
     transition: all ease-in-out 0.3s;
+    border-radius: 5px;
 }
 
 .song-item:hover,
@@ -245,9 +269,20 @@ body {
     transition: all ease-in-out 0.3s;
 }
 
-.queue-item.current {
-    font-weight: bold;
-    color: #1db954;
+.song-item m,
+.queue-item m {
+    font-size: 11px;
+    color: #999;
+    margin-left: 5px;
+    display: flex;
+}
+
+.song-item m:before,
+.queue-item m:before {
+    content: '/';
+    font-weight: 700;
+    color: #5c4763;
+    margin-right: 10px;
 }
 
 .botonmox {
@@ -296,6 +331,7 @@ body {
 #content-area {
     width: 100%;
     flex-grow: 1;
+    overflow-y: auto;
 }
 
 .back-btn {
@@ -331,6 +367,7 @@ body {
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
+    border-radius: 5px;
 }
 
 .create-playlist-form button,
@@ -344,6 +381,7 @@ body {
     text-transform: uppercase;
     cursor: pointer;
     transition: all ease-in-out 0.3s;
+    border-radius: 5px;
 }
 
 .create-playlist-form button:hover,
@@ -362,6 +400,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 5px;
 }
 
 .search-result:hover {
@@ -383,6 +422,7 @@ body {
     text-transform: uppercase;
     cursor: pointer;
     transition: all ease-in-out 0.3s;
+    border-radius: 5px;
 }
 
 .edit-playlist-actions button:hover {
