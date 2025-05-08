@@ -117,16 +117,16 @@ index_songs()
 # Routes
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-    logger.debug("Redirecting from / to /login")
-    return RedirectResponse(url="/login")
+    logger.debug("Serving intro.html")
+    return templates.TemplateResponse("intro.html", {"request": request})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     logger.debug("Serving login.html")
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse("login.html", {"request": request, "error": None})
 
-@app.post("/login")
-async def login(username: str = Form(...), password: str = Form(...)):
+@app.post("/login", response_class=HTMLResponse)
+async def login(request: Request, username: str = Form(...), password: str = Form(...)):
     logger.debug(f"Login attempt with username: {username}")
     hashed_password = hash_password(password)
     if username in users and users[username]["password"] == hashed_password:
@@ -135,7 +135,7 @@ async def login(username: str = Form(...), password: str = Form(...)):
         response.set_cookie(key="session_username", value=username, httponly=True, max_age=3600, samesite="Lax")
         return response
     logger.warning(f"Login failed for username: {username} - Invalid credentials")
-    return JSONResponse(status_code=401, content={"message": "Invalid credentials"})
+    return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials, try again"})
 
 @app.get("/index.html", response_class=HTMLResponse)
 async def index(request: Request):
@@ -193,11 +193,11 @@ async def get_song(song_id: int):
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    logger.debug("Serving signup.html")
-    return templates.TemplateResponse("signup.html", {"request": request})
+    logger.debug("Serving login.html for signup")
+    return templates.TemplateResponse("login.html", {"request": request})
 
 @app.post("/signup")
-async def signup(username: str = Form(...), password: str = Form(...)):
+async def signup(username: str = Form(...), password: str = Form(...), email: str = Form(...), broj: str = Form(...)):
     logger.debug(f"Signup attempt with username: {username}")
     if username in users:
         logger.warning(f"Username {username} already exists")
@@ -206,7 +206,7 @@ async def signup(username: str = Form(...), password: str = Form(...)):
         logger.warning("Signup failed due to empty username or password")
         return JSONResponse(status_code=400, content={"message": "Username and password cannot be empty"})
     hashed_password = hash_password(password)
-    users[username] = {"password": hashed_password}
+    users[username] = {"password": hashed_password, "email": email, "broj": broj}
     save_users()
     logger.debug(f"Signup successful for username: {username}, redirecting to /login")
     return RedirectResponse(url="/login", status_code=303)
@@ -427,4 +427,3 @@ async def search_youtube(query: str):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True, log_level="debug")
-
