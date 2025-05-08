@@ -23,8 +23,8 @@ function initAudioPlayer() {
     });
     audioPlayer.addEventListener('error', (e) => {
         console.error("Audio playback error:", e);
-        const playerInfo = document.getElementById('player-info');
-        if (playerInfo) playerInfo.innerHTML = 'Error playing song, skipping...';
+        const playerInfo = document.getElementById('current-song-title');
+        if (playerInfo) playerInfo.textContent = 'Error playing song, skipping...';
         playNext();
     });
     audioPlayer.addEventListener('loadeddata', () => {
@@ -33,7 +33,6 @@ function initAudioPlayer() {
         updateHistory();
         updatePlayerUI();
     });
-    audioPlayer.addEventListener('timeupdate', updateProgress);
     audioPlayer.addEventListener('play', () => {
         const playPause = document.getElementById('play-pause');
         if (playPause) playPause.innerHTML = '<i class="fas fa-pause"></i>';
@@ -42,23 +41,6 @@ function initAudioPlayer() {
         const playPause = document.getElementById('play-pause');
         if (playPause) playPause.innerHTML = '<i class="fas fa-play"></i>';
     });
-}
-
-function updateProgress() {
-    const progress = document.getElementById('progress');
-    const currentTime = document.getElementById('current-time');
-    const duration = document.getElementById('duration');
-    if (progress && currentTime && duration && audioPlayer.duration) {
-        progress.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        currentTime.textContent = formatTime(audioPlayer.currentTime);
-        duration.textContent = formatTime(audioPlayer.duration);
-    }
-}
-
-function formatTime(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 }
 
 async function playSong(songId) {
@@ -80,7 +62,6 @@ async function playSong(songId) {
     audioPlayer.src = song.url;
     audioPlayer.load();
     updatePlayerUI();
-    renderQueue();
     console.log("Playing song:", song, "Queue:", songQueue, "Index:", currentSongIndex);
 }
 
@@ -100,7 +81,6 @@ function addToQueue(songId) {
         originalQueue.push(song);
     }
     updatePlayerUI();
-    renderQueue();
     console.log("Added to queue:", song, "Queue:", songQueue);
 }
 
@@ -112,7 +92,6 @@ function playNext() {
         audioPlayer.src = nextSong.url;
         audioPlayer.load();
         updatePlayerUI();
-        renderQueue();
         console.log("Next song:", nextSong, "Index:", currentSongIndex);
     } else {
         stopPlayer();
@@ -128,7 +107,6 @@ function playPrevious() {
         audioPlayer.src = prevSong.url;
         audioPlayer.load();
         updatePlayerUI();
-        renderQueue();
         console.log("Previous song:", prevSong, "Index:", currentSongIndex);
     }
 }
@@ -137,14 +115,11 @@ function stopPlayer() {
     console.log("stopPlayer called");
     audioPlayer.pause();
     audioPlayer.src = '';
-    const playerInfo = document.getElementById('player-info');
-    const playerControls = document.querySelector('.player-controls');
-    if (playerInfo) playerInfo.innerHTML = 'Select a song to play';
-    if (playerControls) playerControls.classList.remove('active');
+    const playerInfo = document.getElementById('current-song-title');
+    if (playerInfo) playerInfo.textContent = 'Select a song to play';
     songQueue = [];
     originalQueue = [];
     currentSongIndex = -1;
-    renderQueue();
     console.log("Player stopped");
 }
 
@@ -154,25 +129,9 @@ function togglePlayPause() {
     else audioPlayer.pause();
 }
 
-function seek(event) {
-    const progress = document.getElementById('progress');
-    if (progress && audioPlayer.duration) {
-        const seekPosition = (event.target.value / 100) * audioPlayer.duration;
-        audioPlayer.currentTime = seekPosition;
-    }
-}
-
-function setVolume() {
-    const volume = document.getElementById('volume');
-    if (volume) audioPlayer.volume = volume.value / 100;
-}
-
 function toggleShuffle() {
     console.log("toggleShuffle called");
     isShuffling = !isShuffling;
-    const shuffleBtn = document.getElementById('shuffle-btn');
-    if (shuffleBtn) shuffleBtn.classList.toggle('active', isShuffling);
-    
     if (isShuffling) {
         if (songQueue.length > 0) {
             const currentSong = songQueue[currentSongIndex];
@@ -186,7 +145,6 @@ function toggleShuffle() {
             currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
         }
     }
-    renderQueue();
     console.log("Shuffle toggled:", isShuffling, "Queue:", songQueue);
 }
 
@@ -257,26 +215,6 @@ function updateHistory() {
     }
 }
 
-function recommendSongs(currentSong, allSongs, history, count = 5) {
-    const sameArtist = allSongs.filter(song =>
-        song.artist === currentSong.artist && song.id !== currentSong.id
-    );
-    const frequentPlaylists = getTopPlaylists(history, 2);
-    const playlistSongs = allSongs.filter(song =>
-        frequentPlaylists.includes(song.playlist) && song.id !== currentSong.id
-    );
-    let recommendations = new Set([...sameArtist, ...playlistSongs]);
-    if (recommendations.size < count) {
-        const remaining = allSongs.filter(song =>
-            !recommendations.has(song) && song.id !== currentSong.id
-        );
-        shuffle(remaining);
-        const additionalSongs = remaining.slice(0, count - recommendations.size);
-        additionalSongs.forEach(song => recommendations.add(song));
-    }
-    return Array.from(recommendations).slice(0, count);
-}
-
 function playPlaylist(playlistName) {
     console.log("playPlaylist called with:", playlistName);
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
@@ -288,53 +226,6 @@ function playPlaylist(playlistName) {
         currentSongIndex = 0;
     }
     playNext();
-    renderQueue();
-}
-
-function renderQueue() {
-    console.log("renderQueue called");
-    const queueList = document.getElementById('queue-list');
-    if (!queueList) {
-        console.log("Queue list container not found, skipping renderQueue");
-        return;
-    }
-    queueList.innerHTML = '<h3>Queue</h3>';
-    if (songQueue.length === 0) {
-        queueList.innerHTML += '<p>No songs in queue.</p>';
-    } else {
-        queueList.innerHTML += '<button onclick="clearQueue()" class="clear-queue-btn">Clear Queue</button>';
-        songQueue.forEach((song, index) => {
-            const queueItem = document.createElement('div');
-            queueItem.className = 'queue-item';
-            queueItem.innerHTML = `
-                <span ${index === currentSongIndex ? 'style="font-weight: bold; color: #1db954;"' : ''}>${song.title} - ${song.artist}</span>
-                <button onclick="playSong(${song.id})"><i class="fas fa-play"></i></button>
-            `;
-            queueList.appendChild(queueItem);
-        });
-    }
-}
-
-function clearQueue() {
-    console.log("clearQueue called");
-    let currentSong = null;
-    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
-        currentSong = songQueue[currentSongIndex];
-    }
-
-    songQueue = [];
-    originalQueue = [];
-
-    if (currentSong) {
-        songQueue = [currentSong];
-        originalQueue = [currentSong];
-        currentSongIndex = 0;
-    } else {
-        currentSongIndex = -1;
-    }
-
-    renderQueue();
-    updatePlayerUI();
 }
 
 function showEditPlaylistPopup(playlistId, playlistName) {
@@ -343,21 +234,26 @@ function showEditPlaylistPopup(playlistId, playlistName) {
         alert("Cannot edit this playlist. Please create it through the interface.");
         return;
     }
-    const existingPopup = document.getElementById('edit-playlist-popup');
-    if (existingPopup) existingPopup.remove();
-
-    const popup = document.createElement('div');
-    popup.id = 'edit-playlist-popup';
-    popup.className = 'edit-playlist-popup';
-    popup.innerHTML = `
-        <div class="popup-content">
-            <h3>Edit Playlist</h3>
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showPlaylistSongs('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Edit Playlist: ${playlistName}</h2>
+        <div class="edit-playlist-actions">
             <button onclick="updatePlaylistImage(${playlistId})">Change Image</button>
             <button onclick="renamePlaylist(${playlistId}, '${playlistName.replace(/'/g, "\\'")}')">Rename Playlist</button>
-            <button onclick="document.getElementById('edit-playlist-popup').remove()">Cancel</button>
+            <button onclick="deletePlaylist(${playlistId})">Delete Playlist</button>
         </div>
     `;
-    document.body.appendChild(popup);
 }
 
 function updatePlaylistImage(playlistId) {
@@ -384,8 +280,8 @@ function updatePlaylistImage(playlistId) {
             })
             .then(data => {
                 alert(data.message);
-                renderPlaylists();
-                document.getElementById('edit-playlist-popup')?.remove();
+                fetchPlaylists();
+                showMainView();
             })
             .catch(error => {
                 console.error("Error updating playlist image:", error);
@@ -403,10 +299,7 @@ function renamePlaylist(playlistId, currentName) {
         return;
     }
     const newName = prompt("Enter new playlist name:", currentName);
-    if (newName === null) {
-        document.getElementById('edit-playlist-popup')?.remove();
-        return;
-    }
+    if (newName === null) return;
 
     fetch('/rename_playlist', {
         method: 'POST',
@@ -421,12 +314,13 @@ function renamePlaylist(playlistId, currentName) {
     })
     .then(data => {
         alert(data.message);
-        renderPlaylists();
+        fetchPlaylists();
         if (selectedPlaylist === currentName) {
             selectedPlaylist = newName;
             showPlaylistSongs(newName);
+        } else {
+            showMainView();
         }
-        document.getElementById('edit-playlist-popup')?.remove();
     })
     .catch(error => {
         console.error("Error renaming playlist:", error);
@@ -438,97 +332,217 @@ function showPlaylistSongs(playlistName) {
     console.log("showPlaylistSongs called with:", playlistName);
     selectedPlaylist = playlistName;
     const playlistSongs = allSongs.filter(song => song.playlist === playlistName).sort((a, b) => a.position - b.position);
-    const songList = document.getElementById('song-list');
-    if (!songList) {
-        console.log("Song list container not found, skipping showPlaylistSongs");
-        return;
-    }
-    songList.innerHTML = `
-        <div class="card-body">
-            <div class="playlist-header">
-                <button onclick="showMainPage()" class="back-btn"><i class="fas fa-arrow-left"></i></button>
-                <h2>Songs in ${playlistName}</h2>
-                <button onclick="deletePlaylist(${playlists.find(p => p.name === playlistName)?.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+    const contentArea = document.getElementById('content-area');
+    const playlist = playlists.find(p => p.name === playlistName);
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
             </div>
-            <ul id="sortable-songs" class="sortable">`;
-    if (playlistSongs.length === 0) {
-        songList.innerHTML += '<p>No songs found in this playlist.</p>';
-    } else {
-        playlistSongs.forEach(song => {
-            const songItem = document.createElement('li');
-            songItem.className = 'song-item';
-            songItem.dataset.id = song.id;
-            songItem.dataset.songId = song.id;
-            songItem.innerHTML = `
-                <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
-                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
-                <button onclick="playPlaylist('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-list-play"></i></button>
-                <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
-            `;
-            songList.querySelector('#sortable-songs').appendChild(songItem);
-        });
-    }
-    songList.innerHTML += '</ul></div>';
+        </div>
+        <button class="back-btn" onclick="showPlaylistsView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Songs in ${playlistName}</h2>
+        <div class="edit-playlist-actions">
+            <button onclick="showEditPlaylistPopup(${playlist.id}, '${playlistName.replace(/'/g, "\\'")}')">Edit Playlist</button>
+        </div>
+        <div class="song-list" id="songs-container">
+            ${playlistSongs.length === 0 ? '<p>No songs found in this playlist.</p>' : playlistSongs.map(song => `
+                <div class="song-item" draggable="true" data-id="${song.id}" data-song-id="${song.id}">
+                    <i class="far fa-waveform"></i>
+                    <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
+                    <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
+                    <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+                </div>
+            `).join('')}
+        </div>
+    `;
     makeSortable();
 }
 
 function createPlaylist() {
     console.log("createPlaylist called");
-    const playlistNameInput = document.getElementById('new-playlist-name');
-    if (!playlistNameInput) {
-        console.log("New playlist name input not found, skipping createPlaylist");
-        return;
-    }
-    const playlistName = playlistNameInput.value.trim();
-    if (!playlistName) {
-        alert("Playlist name cannot be empty.");
-        return;
-    }
-
-    fetch('/create_playlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `playlist_name=${encodeURIComponent(playlistName)}`
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.message || 'Playlist creation failed'); });
-        }
-        return response.json();
-    })
-    .then(data => {
-        alert(data.message);
-        playlistNameInput.value = '';
-        renderPlaylists();
-    })
-    .catch(error => {
-        console.error("Error creating playlist:", error);
-        alert("Failed to create playlist: " + error.message);
-    });
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Create Playlist</h2>
+        <form id="create-playlist-form" class="create-playlist-form">
+            <input type="text" name="playlist_name" id="playlist-name" placeholder="Playlist Name" required>
+            <button type="submit">Create</button>
+        </form>
+    `;
 }
 
-function addSongFromUrl(youtubeUrl, playlistName) {
-    console.log("addSongFromUrl called with:", youtubeUrl, playlistName);
-    if (!youtubeUrl || !playlistName) {
-        alert("Please provide a YouTube URL and select a playlist.");
-        return;
-    }
-
-    fetch('/add_song', {
+function handleCreatePlaylist(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    fetch('/create_playlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `playlist_name=${encodeURIComponent(playlistName)}&youtube_url=${encodeURIComponent(youtubeUrl)}`
+        body: formData
     })
     .then(response => response.json())
     .then(data => {
         alert(data.message);
-        indexSongs();
-        if (selectedPlaylist === playlistName) showPlaylistSongs(playlistName);
+        fetchPlaylists();
+        showMainView();
     })
-    .catch(error => {
-        console.error("Error adding song:", error);
-        alert("Failed to add song. Check the URL and try again.");
-    });
+    .catch(error => console.error('Error creating playlist:', error));
+}
+
+function addSong() {
+    console.log("addSong called");
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Add Song</h2>
+        <form id="add-song-form" class="add-song-form">
+            <select name="playlist_name" id="add-song-playlist" required>
+                <option value="">Select Playlist</option>
+                ${playlists.map(playlist => `<option value="${playlist.name}">${playlist.name}</option>`).join('')}
+            </select>
+            <input type="text" name="youtube_url" id="youtube-url" placeholder="YouTube URL" required>
+            <button type="submit">Add Song</button>
+        </form>
+    `;
+}
+
+function handleAddSong(event) {
+    event.preventDefault();
+    const formData = new FormData(event.target);
+    fetch('/add_song', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        fetchSongs();
+        showMainView();
+    })
+    .catch(error => console.error('Error adding song:', error));
+}
+
+function showPlaylistsView() {
+    console.log("showPlaylistsView called");
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>All Playlists</h2>
+        <div class="playlist-grid" id="all-playlists-container">
+            ${playlists.map(playlist => `
+                <div class="playlist-item" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">
+                    <img src="${playlist.image}" alt="${playlist.name}">
+                    <p>${playlist.name}</p>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function showSearchSongsView() {
+    console.log("showSearchSongsView called");
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Search Songs</h2>
+        <form id="search-songs-form" class="search-songs-form">
+            <input type="text" id="search-query" placeholder="Search for a song..." required>
+            <button type="submit">Search</button>
+        </form>
+        <div id="search-results"></div>
+    `;
+}
+
+function handleSearchSongs(event) {
+    event.preventDefault();
+    const query = document.getElementById('search-query').value;
+    fetch(`/search_youtube?query=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+            data.results.forEach(result => {
+                const div = document.createElement('div');
+                div.className = 'search-result';
+                div.innerHTML = `
+                    <span>${result.title} - ${result.artist}</span>
+                    <button onclick="addSearchedSong('${result.url}')">Add to Playlist</button>
+                `;
+                resultsContainer.appendChild(div);
+            });
+        })
+        .catch(error => console.error('Error searching songs:', error));
+}
+
+function addSearchedSong(youtubeUrl) {
+    console.log("addSearchedSong called with:", youtubeUrl);
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+            </div>
+        </div>
+        <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
+        <h2>Add Song</h2>
+        <form id="add-song-form" class="add-song-form">
+            <select name="playlist_name" id="add-song-playlist" required>
+                <option value="">Select Playlist</option>
+                ${playlists.map(playlist => `<option value="${playlist.name}">${playlist.name}</option>`).join('')}
+            </select>
+            <input type="text" name="youtube_url" id="youtube-url" value="${youtubeUrl}" placeholder="YouTube URL" required>
+            <button type="submit">Add Song</button>
+        </form>
+    `;
 }
 
 function deletePlaylist(playlistId) {
@@ -543,8 +557,8 @@ function deletePlaylist(playlistId) {
     .then(data => {
         alert(data.message);
         selectedPlaylist = null;
-        renderPlaylists();
-        showMainPage();
+        fetchPlaylists();
+        showMainView();
     })
     .catch(error => console.error("Error deleting playlist:", error));
 }
@@ -560,7 +574,7 @@ function deleteSong(songId) {
     .then(response => response.json())
     .then(data => {
         alert(data.message);
-        indexSongs();
+        fetchSongs();
         if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
     })
     .catch(error => console.error("Error deleting song:", error));
@@ -568,9 +582,9 @@ function deleteSong(songId) {
 
 function makeSortable() {
     console.log("makeSortable called");
-    const sortableList = document.getElementById('sortable-songs');
+    const sortableList = document.getElementById('songs-container');
     if (!sortableList) return;
-    Sortable.create(sortableList, {
+    new Sortable(sortableList, {
         animation: 150,
         onEnd: (evt) => {
             const songIds = Array.from(sortableList.children).map(item => item.dataset.id);
@@ -582,408 +596,200 @@ function makeSortable() {
             .then(response => response.json())
             .then(data => {
                 console.log(data.message);
-                indexSongs();
+                fetchSongs();
             })
             .catch(error => console.error("Error rearranging playlist:", error));
         }
     });
 }
 
-function indexSongs() {
-    console.log("indexSongs called");
+function fetchSongs() {
+    console.log("fetchSongs called");
     fetch('/songs')
         .then(response => response.json())
         .then(data => {
             allSongs = data.songs;
             console.log("Updated songs:", allSongs);
             if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
-            else showMainPage();
+            else displaySongs();
         })
-        .catch(error => console.error("Error indexing songs:", error));
+        .catch(error => console.error("Error fetching songs:", error));
 }
 
-function updatePlayerUI() {
-    console.log("updatePlayerUI called");
-    console.log("songQueue:", songQueue, "currentSongIndex:", currentSongIndex);
-    const playerInfo = document.getElementById('player-info');
-    const playerControls = document.querySelector('.player-controls');
-    if (!playerInfo || !playerControls) {
-        console.log("Player UI elements not found, skipping updatePlayerUI");
-        return;
-    }
-    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
-        const currentSong = songQueue[currentSongIndex];
-        console.log("Current song:", currentSong);
-        playerInfo.innerHTML = `${currentSong.title} - ${currentSong.artist}`;
-        playerControls.classList.add('active');
-    } else {
-        playerInfo.innerHTML = 'Select a song to play';
-        playerControls.classList.remove('active');
-    }
-}
-
-function renderPlaylists() {
-    console.log("renderPlaylists called");
-    const playlistContainer = document.getElementById('playlists');
-    if (!playlistContainer) {
-        console.log("Playlist container not found, skipping renderPlaylists");
-        return;
-    }
+function fetchPlaylists() {
+    console.log("fetchPlaylists called");
     fetch('/playlists')
         .then(response => response.json())
         .then(data => {
             playlists = data.playlists;
-            console.log("Playlists:", playlists);
-            playlistContainer.innerHTML = `
-                <div class="card-body">
-                    <h2>Playlists</h2>
-                    <div class="add-playlist">
-                        <input type="text" id="new-playlist-name" placeholder="New Playlist">
-                        <button onclick="createPlaylist()"><i class="fas fa-plus"></i></button>
-                    </div>`;
-            playlists.forEach(playlist => {
-                const playlistDiv = document.createElement('div');
-                playlistDiv.className = 'playlist-item';
-                playlistDiv.innerHTML = `
-                    <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
-                    <button class="playlist-name" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">${playlist.name}</button>
-                `;
-                playlistContainer.appendChild(playlistDiv);
-            });
-            playlistContainer.innerHTML += '</div>';
-
-            const playlistSelect = document.getElementById('playlist-select');
-            if (playlistSelect) {
-                playlistSelect.innerHTML = '<option value="">Select Playlist</option>';
-                playlists.forEach(playlist => {
-                    const option = document.createElement('option');
-                    option.value = playlist.name;
-                    option.textContent = playlist.name;
-                    playlistSelect.appendChild(option);
-                });
-            }
+            console.log("Updated playlists:", playlists);
+            displayPlaylists();
         })
-        .catch(error => console.error("Error rendering playlists:", error));
+        .catch(error => console.error("Error fetching playlists:", error));
 }
 
-function showMainPage() {
-    console.log("showMainPage called");
-    const songList = document.getElementById('song-list');
-    if (!songList) {
-        console.log("Song list container not found, skipping showMainPage");
-        return;
+function displayPlaylists() {
+    console.log("displayPlaylists called");
+    const container = document.getElementById('playlists-container');
+    if (!container) return;
+    container.innerHTML = '';
+    playlists.forEach(playlist => {
+        const div = document.createElement('div');
+        div.className = 'playlist-item';
+        div.innerHTML = `
+            <img src="${playlist.image}" alt="${playlist.name}">
+            <p>${playlist.name}</p>
+        `;
+        div.addEventListener('click', () => {
+            selectedPlaylist = playlist.name;
+            showPlaylistSongs(playlist.name);
+        });
+        container.appendChild(div);
+    });
+}
+
+function displaySongs() {
+    console.log("displaySongs called");
+    const container = document.getElementById('songs-container');
+    if (!container) return;
+    container.innerHTML = '';
+    let filteredSongs = allSongs;
+    if (selectedPlaylist) {
+        filteredSongs = allSongs.filter(song => song.playlist === selectedPlaylist).sort((a, b) => a.position - b.position);
     }
+    if (filteredSongs.length === 0) {
+        container.innerHTML += '<p>No songs found in this playlist.</p>';
+    } else {
+        filteredSongs.forEach(song => {
+            const songItem = document.createElement('div');
+            songItem.className = 'song-item';
+            songItem.draggable = true;
+            songItem.dataset.id = song.id;
+            songItem.dataset.songId = song.id;
+            songItem.innerHTML = `
+                <i class="far fa-waveform"></i>
+                <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
+                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
+                <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+            `;
+            songItem.addEventListener('dragstart', handleDragStart);
+            songItem.addEventListener('dragover', handleDragOver);
+            songItem.addEventListener('drop', handleDrop);
+            songItem.addEventListener('dragend', handleDragEnd);
+            container.appendChild(songItem);
+        });
+    }
+    makeSortable();
+}
+
+function showMainView() {
+    console.log("showMainView called");
     selectedPlaylist = null;
-    songList.innerHTML = `
-        <div class="card-body">
-            <h2>Songs</h2>
-            <p>Select a playlist to view songs.</p>
-            <div class="add-song">
-                <input type="text" id="youtube-url" placeholder="YouTube URL">
-                <select id="playlist-select"></select>
-                <button onclick="addSongFromUrl(document.getElementById('youtube-url').value, document.getElementById('playlist-select').value)"><i class="fas fa-download"></i></button>
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `
+        <div class="control-panel">
+            <audio id="audio-player" controls>
+                <source id="audio-source" src="${audioPlayer.src}" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="song-info">
+                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
             </div>
-        </div>`;
-    renderPlaylists();
+        </div>
+        <div class="playlists">
+            <h2>Playlists</h2>
+            <div class="playlist-grid" id="playlists-container"></div>
+        </div>
+        <div class="songs">
+            <h2>Songs</h2>
+            <div class="song-list" id="songs-container"></div>
+        </div>
+    `;
+    displayPlaylists();
+    displaySongs();
 }
 
-function search() {
-    console.log("search called");
-    const searchInput = document.getElementById('search-input');
-    if (!searchInput) {
-        console.log("Search input not found, skipping search");
-        return;
-    }
-    const query = searchInput.value.trim().toLowerCase();
-    if (!query) {
-        showMainPage();
-        return;
-    }
-
-    const matchingPlaylists = playlists.filter(p => p.name.toLowerCase().includes(query));
-    const matchingSongs = allSongs.filter(s => 
-        s.title.toLowerCase().includes(query) || s.artist.toLowerCase().includes(query)
-    );
-
-    fetch(`/search_youtube?query=${encodeURIComponent(query)}`)
-        .then(response => response.json())
-        .then(youtubeData => {
-            const songList = document.getElementById('song-list');
-            if (!songList) {
-                console.log("Song list container not found, skipping search rendering");
-                return;
-            }
-            songList.innerHTML = '<div class="card-body"><h2>Search Results</h2>';
-
-            if (matchingPlaylists.length > 0) {
-                songList.innerHTML += '<h3>Playlists</h3>';
-                matchingPlaylists.forEach(playlist => {
-                    const item = document.createElement('div');
-                    item.className = 'song-item';
-                    item.innerHTML = `
-                        <img src="${playlist.image}" alt="${playlist.name}" class="playlist-image" onclick="showEditPlaylistPopup(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')">
-                        <span>${playlist.name}</span>
-                        <button onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')"><i class="fas fa-folder"></i></button>
-                    `;
-                    songList.querySelector('.card-body').appendChild(item);
-                });
-            }
-
-            if (matchingSongs.length > 0) {
-                songList.innerHTML += '<h3>Local Songs</h3>';
-                matchingSongs.forEach(song => {
-                    const item = document.createElement('div');
-                    item.className = 'song-item';
-                    item.innerHTML = `
-                        <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist} (${song.playlist})</span>
-                        <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
-                    `;
-                    songList.querySelector('.card-body').appendChild(item);
-                });
-            }
-
-            if (youtubeData.results.length > 0) {
-                songList.innerHTML += '<h3>YouTube Results</h3>';
-                youtubeData.results.forEach(video => {
-                    const item = document.createElement('div');
-                    item.className = 'song-item';
-                    item.innerHTML = `
-                        <span>${video.title} - ${video.artist}</span>
-                        <select class="youtube-playlist-select" onchange="addSongFromUrl('${video.url}', this.value)">
-                            <option value="">Add to Playlist</option>
-                            ${playlists.map(p => `<option value="${p.name}">${p.name}</option>`).join('')}
-                        </select>
-                    `;
-                    songList.querySelector('.card-body').appendChild(item);
-                });
-            }
-
-            if (matchingPlaylists.length === 0 && matchingSongs.length === 0 && youtubeData.results.length === 0) {
-                songList.innerHTML += '<p>No results found.</p>';
-            }
-            songList.innerHTML += '</div>';
-        })
-        .catch(error => console.error("Error searching:", error));
-}
-
-function showRecommendations() {
-    console.log("showRecommendations called");
-    const queueList = document.getElementById('queue-list');
-    if (!queueList) {
-        console.log("Queue list container not found, skipping showRecommendations");
-        return;
-    }
+function updatePlayerUI() {
+    console.log("updatePlayerUI called");
+    const title = document.getElementById('current-song-title');
+    const artist = document.getElementById('current-song-artist');
+    if (!title || !artist) return;
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const currentSong = songQueue[currentSongIndex];
-        const recommendations = recommendSongs(currentSong, allSongs, history);
-        queueList.innerHTML = '<h3>Recommendations</h3>';
-        recommendations.forEach((song, index) => {
-            const queueItem = document.createElement('div');
-            queueItem.className = 'queue-item';
-            queueItem.innerHTML = `
-                <span>${song.title} - ${song.artist}</span>
-                <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
-            `;
-            queueList.appendChild(queueItem);
-        });
+        title.textContent = currentSong.title;
+        artist.textContent = currentSong.artist;
     } else {
-        alert("No song is currently playing to base recommendations on.");
+        title.textContent = 'Select a song to play';
+        artist.textContent = 'Artist';
     }
+}
+
+function handleDragStart(event) {
+    event.dataTransfer.setData('text/plain', event.target.dataset.id);
+}
+
+function handleDragOver(event) {
+    event.preventDefault();
+}
+
+function handleDrop(event) {
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData('text');
+    const droppedOn = event.target.closest('.song-item');
+    if (!droppedOn || draggedId === droppedOn.dataset.id) return;
+
+    const container = document.getElementById('songs-container');
+    const allItems = Array.from(container.getElementsByClassName('song-item'));
+    const draggedIndex = allItems.findIndex(item => item.dataset.id === draggedId);
+    const droppedIndex = allItems.indexOf(droppedOn);
+
+    if (draggedIndex < droppedIndex) {
+        container.insertBefore(allItems[draggedIndex], droppedOn.nextSibling);
+    } else {
+        container.insertBefore(allItems[draggedIndex], droppedOn);
+    }
+    updateSongOrder();
+}
+
+function handleDragEnd() {
+    // Cleanup if needed
+}
+
+function updateSongOrder() {
+    const container = document.getElementById('songs-container');
+    if (!container) return;
+    const songIds = Array.from(container.getElementsByClassName('song-item')).map(item => item.dataset.id);
+    fetch('/rearrange_playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(data.message);
+        fetchSongs();
+    })
+    .catch(error => console.error("Error rearranging playlist:", error));
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
 
-    // Determine the current page
-    const page = document.documentElement.getAttribute('data-page');
-    console.log("Current page:", page);
-
-    // Initialize audio player on all pages
     initAudioPlayer();
+    fetchSongs();
+    fetchPlaylists();
 
-    // Handle login page logic
-    if (page === 'login') {
-        const loginForm = document.getElementById('login-form');
-        console.log("Login form element:", loginForm);
+    document.getElementById('show-playlists-btn').addEventListener('click', showPlaylistsView);
+    document.getElementById('search-songs-btn').addEventListener('click', showSearchSongsView);
+    document.getElementById('add-song-btn').addEventListener('click', addSong);
+    document.getElementById('create-playlist-btn').addEventListener('click', createPlaylist);
 
-        if (loginForm) {
-            loginForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const username = document.getElementById('login-username').value;
-                const password = document.getElementById('login-password').value;
-                console.log(`Attempting login for username: ${username}`);
-                try {
-                    const response = await fetch('/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-                    });
-                    console.log('Login response status:', response.status, 'Redirected:', response.redirected);
-
-                    if (response.status === 303 || response.redirected) {
-                        console.log('Login successful, redirecting to /index.html');
-                        window.location.href = '/index.html';
-                        return; // Prevent further processing
-                    }
-
-                    const contentType = response.headers.get('content-type');
-                    if (contentType && contentType.includes('application/json')) {
-                        const errorData = await response.json();
-                        console.log('Login failed with response:', errorData);
-                        alert('Login failed: ' + (errorData.message || 'Unknown error'));
-                    } else {
-                        const text = await response.text();
-                        console.log('Non-JSON response received:', text);
-                        alert('Login failed: Server returned an unexpected response - ' + text.slice(0, 100));
-                        if (text.includes('<!DOCTYPE html>')) {
-                            console.log('Redirecting to /login due to HTML response');
-                            window.location.href = '/login';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error during login:', error);
-                    alert('An error occurred during login: ' + error.message);
-                }
-            });
-        }
-    }
-
-    // Handle index page logic
-    if (page === 'index') {
-        console.log("Initializing index.html logic");
-
-        // Fetch songs and initialize the page
-        fetch('/songs')
-            .then(response => response.json())
-            .then(data => {
-                allSongs = data.songs;
-                console.log("Initial songs:", allSongs);
-                showMainPage();
-                renderQueue();
-                updatePlayerUI();
-            })
-            .catch(error => console.error("Error fetching songs:", error));
-
-        // Search functionality
-        const searchInput = document.getElementById('search-input');
-        if (searchInput) {
-            searchInput.addEventListener('keypress', (event) => {
-                if (event.key === 'Enter') {
-                    search();
-                }
-            });
-        }
-
-        // Add recommend button
-        const controls = document.querySelector('.controls');
-        if (controls) {
-            const recommendBtn = document.createElement('button');
-            recommendBtn.id = 'recommend-btn';
-            recommendBtn.innerHTML = '<i class="fas fa-thumbs-up"></i>';
-            recommendBtn.onclick = showRecommendations;
-            controls.appendChild(recommendBtn);
-        }
-
-        // Queue resize functionality
-        const queueResizeHandle = document.getElementById('queue-resize-handle');
-        const queueCollapse = document.getElementById('queueCollapse');
-        let isQueueDragging = false;
-        if (queueResizeHandle && queueCollapse) {
-            queueResizeHandle.addEventListener('mousedown', (e) => {
-                isQueueDragging = true;
-                document.addEventListener('mousemove', onQueueMouseMove);
-                document.addEventListener('mouseup', onQueueMouseUp);
-            });
-
-            queueResizeHandle.addEventListener('touchstart', (e) => {
-                isQueueDragging = true;
-                document.addEventListener('touchmove', onQueueTouchMove);
-                document.addEventListener('touchend', onQueueTouchEnd);
-            });
-        }
-
-        function onQueueMouseMove(e) {
-            if (!isQueueDragging || !queueCollapse) return;
-            const playerControls = document.querySelector('.player-controls');
-            if (!playerControls) return;
-            const playerRect = playerControls.getBoundingClientRect();
-            const newHeight = window.innerHeight - e.clientY - playerRect.height + queueCollapse.scrollHeight;
-            const minHeight = 100;
-            const maxHeight = 400;
-            queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-        }
-
-        function onQueueTouchMove(e) {
-            if (!isQueueDragging || !queueCollapse) return;
-            const touch = e.touches[0];
-            const playerControls = document.querySelector('.player-controls');
-            if (!playerControls) return;
-            const playerRect = playerControls.getBoundingClientRect();
-            const newHeight = window.innerHeight - touch.clientY - playerRect.height + queueCollapse.scrollHeight;
-            const minHeight = 100;
-            const maxHeight = 400;
-            queueCollapse.style.maxHeight = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-        }
-
-        function onQueueMouseUp() {
-            isQueueDragging = false;
-            document.removeEventListener('mousemove', onQueueMouseMove);
-            document.removeEventListener('mouseup', onQueueMouseUp);
-        }
-
-        function onQueueTouchEnd() {
-            isQueueDragging = false;
-            document.removeEventListener('touchmove', onQueueTouchMove);
-            document.removeEventListener('touchend', onQueueTouchEnd);
-        }
-
-        // Player resize functionality
-        const playerResizeHandle = document.getElementById('player-resize-handle');
-        const playerControls = document.querySelector('.player-controls');
-        let isPlayerDragging = false;
-        if (playerResizeHandle && playerControls) {
-            playerResizeHandle.addEventListener('mousedown', (e) => {
-                isPlayerDragging = true;
-                document.addEventListener('mousemove', onPlayerMouseMove);
-                document.addEventListener('mouseup', onPlayerMouseUp);
-            });
-
-            playerResizeHandle.addEventListener('touchstart', (e) => {
-                isPlayerDragging = true;
-                document.addEventListener('touchmove', onPlayerTouchMove);
-                document.addEventListener('touchend', onPlayerTouchEnd);
-            });
-        }
-
-        function onPlayerMouseMove(e) {
-            if (!isPlayerDragging || !playerControls) return;
-            const newHeight = window.innerHeight - e.clientY;
-            const minHeight = 80;
-            const maxHeight = 300;
-            playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-        }
-
-        function onPlayerTouchMove(e) {
-            if (!isPlayerDragging || !playerControls) return;
-            const touch = e.touches[0];
-            const newHeight = window.innerHeight - touch.clientY;
-            const minHeight = 80;
-            const maxHeight = 300;
-            playerControls.style.height = `${Math.max(minHeight, Math.min(maxHeight, newHeight))}px`;
-        }
-
-        function onPlayerMouseUp() {
-            isPlayerDragging = false;
-            document.removeEventListener('mousemove', onPlayerMouseMove);
-            document.removeEventListener('mouseup', onPlayerMouseUp);
-        }
-
-        function onPlayerTouchEnd() {
-            isPlayerDragging = false;
-            document.removeEventListener('touchmove', onPlayerTouchMove);
-            document.removeEventListener('touchend', onPlayerTouchEnd);
-        }
-    }
+    document.addEventListener('submit', (event) => {
+        if (event.target.id === 'create-playlist-form') handleCreatePlaylist(event);
+        if (event.target.id === 'add-song-form') handleAddSong(event);
+        if (event.target.id === 'search-songs-form') handleSearchSongs(event);
+    });
 });
 
 console.log("Script loaded - End of file");

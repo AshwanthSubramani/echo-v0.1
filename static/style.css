@@ -1,316 +1,360 @@
 body {
-    background: linear-gradient(135deg, #1a1a1a, #2c2c2c);
-    color: #ffffff;
-    font-family: 'Arial', sans-serif;
-    min-height: 100vh;
+    background: #000;
     margin: 0;
+    padding: 0;
+    min-height: 100vh;
     display: flex;
-    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 }
 
-h1 {
-    font-family: 'Orbitron', sans-serif;
-    color: #1db954;
+.moxybaul {
+    width: 800px;
+    height: 550px;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+    margin: auto;
+    border: 20px solid #080808;
+    outline: 1px solid #111;
+    overflow: hidden;
+    transition: all ease-in-out 1s;
+}
+
+.nameboxm {
+    display: flex;
+    color: #ccc;
+    text-transform: lowercase;
+    text-align: center;
+    width: 400px;
+    height: 550px;
+    margin: auto;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+}
+
+.nmox1 {
+    font-family: 'Chill', sans-serif;
+    font-size: 200px;
+    position: relative;
+    left: -60px;
+    transition: all ease-in-out 0.9s;
+    transition-delay: 0.8s;
+}
+
+.nmox2 {
+    font-family: 'Chill', sans-serif;
+    font-size: 200px;
+    position: relative;
+    right: -30px;
+    transition: all ease-in-out 0.8s;
+    transition-delay: 0.8s;
+}
+
+.moxybaul:hover .nmox1 {
+    left: -450px;
+    transition: all ease-in-out 0.8s;
+}
+
+.moxybaul:hover .nmox2 {
+    right: -450px;
+    transition: all ease-in-out 0.8s;
+}
+
+.box-dmox {
+    width: 800px;
+    height: 550px;
+    position: relative;
+    top: -550px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+}
+
+.musicmox {
+    width: 600px;
+    height: 450px;
+    background: rgba(0, 0, 0, 0.6);
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+    bottom: -520px;
+    transition: all ease-in-out 0.8s;
+    overflow-y: auto;
+}
+
+.moxybaul:hover .musicmox {
+    bottom: 0px;
+    transition: all ease-in-out 0.8s;
+    transition-delay: 0.8s;
+}
+
+.control-panel {
+    width: 100%;
     text-align: center;
     margin-bottom: 20px;
 }
 
-h2, h3 {
-    color: #1db954;
-}
-
-.container-fluid {
-    flex: 1;
-    padding: 20px;
-}
-
-.card {
-    background: rgba(255, 255, 255, 0.05);
-    border: none;
-    border-radius: 10px;
-    margin-bottom: 20px;
-}
-
-.card-body {
-    padding: 20px;
-}
-
-.header-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-info span {
-    color: #ffffff;
-}
-
-.search-bar {
-    margin-bottom: 20px;
-}
-
-#search-input {
+#audio-player {
     width: 100%;
-    padding: 10px;
+    background: rgba(0, 0, 0, 0.4);
     border: none;
-    border-radius: 5px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
+    color: #ccc;
 }
 
-#search-input::placeholder {
-    color: #aaaaaa;
+.song-info {
+    color: #ccc;
+    font-size: 12px;
+    margin-top: 10px;
 }
 
-.add-playlist, .add-song {
+.playlists h2,
+.songs h2 {
+    color: #5c4763;
+    font-size: 14px;
+    width: 100%;
+    border-bottom: 1px solid #5c4763;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.playlist-grid {
     display: flex;
+    flex-wrap: wrap;
     gap: 10px;
-    margin-bottom: 20px;
-}
-
-.add-playlist input, .add-song input, .add-song select {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-}
-
-.add-playlist input::placeholder, .add-song input::placeholder {
-    color: #aaaaaa;
-}
-
-.add-playlist button, .add-song button {
-    padding: 10px;
-    background: #1db954;
-    border: none;
-    border-radius: 5px;
-    color: #ffffff;
-    cursor: pointer;
-}
-
-.add-playlist button:hover, .add-song button:hover {
-    background: #17a34a;
+    width: 100%;
 }
 
 .playlist-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 10px;
+    width: 120px;
+    text-align: center;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
 }
 
-.playlist-image {
-    width: 50px;
-    height: 50px;
+.playlist-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.playlist-item img {
+    width: 100px;
+    height: 100px;
     object-fit: cover;
-    border-radius: 5px;
-    cursor: pointer;
+    border: 2px solid #222;
 }
 
-.playlist-name {
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.1em;
-    cursor: pointer;
+.playlist-item p {
+    color: #ccc;
+    margin: 5px 0 0;
+    font-size: 10px;
 }
 
-.playlist-name:hover {
-    color: #1db954;
+.song-list {
+    width: 100%;
 }
 
 .song-item {
+    width: 100%;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 4px;
+    line-height: 10px;
     margin-bottom: 5px;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
+}
+
+.song-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.song-item i {
+    font-size: 20px;
+    color: #ccc;
+    padding: 10px;
 }
 
 .song-item span {
-    flex: 1;
+    width: 70px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #5c4763;
+    border: 0;
+    text-decoration: none;
+    transition: all ease-in-out 0.3s;
 }
 
-.song-item button {
-    background: none;
-    border: none;
-    color: #ffffff;
-    cursor: pointer;
+.song-item span:hover {
+    color: #ccc;
+    transition: all ease-in-out 0.3s;
 }
 
-.song-item button:hover {
-    color: #1db954;
-}
-
-.youtube-playlist-select {
-    padding: 5px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ffffff;
-    border: none;
-    border-radius: 5px;
-}
-
-.player-controls {
-    position: fixed;
-    bottom: 0;
-    width: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 10px;
-    height: 120px;
-    display: none;
-}
-
-.player-controls.active {
-    display: block;
-}
-
-#player-info {
-    text-align: center;
-    margin-bottom: 10px;
-    color: #ffffff;
-}
-
-.controls {
+.song-item m {
+    font-size: 11px;
+    color: #999;
+    margin-left: 5px;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
 }
 
-.controls button {
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.2em;
-    cursor: pointer;
-}
-
-.controls button:hover {
-    color: #1db954;
-}
-
-#progress {
-    width: 50%;
-    cursor: pointer;
-}
-
-#current-time, #duration {
-    color: #aaaaaa;
-    font-size: 0.9em;
-}
-
-#volume {
-    width: 100px;
-    cursor: pointer;
-}
-
-.resize-handle {
-    width: 100%;
-    height: 5px;
-    background: #1db954;
-    cursor: ns-resize;
-}
-
-#queueCollapse {
-    max-height: 200px;
-    overflow-y: auto;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 10px;
-}
-
-.queue-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 5px;
-    background: rgba(255, 255, 255, 0.05);
-    margin-bottom: 5px;
-    border-radius: 5px;
-}
-
-.clear-queue-btn {
-    background: #ff4444;
-    border: none;
-    padding: 5px 10px;
-    color: #ffffff;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-bottom: 10px;
-}
-
-.clear-queue-btn:hover {
-    background: #cc0000;
-}
-
-.edit-playlist-popup {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.popup-content {
-    background: #2c2c2c;
-    padding: 20px;
-    border-radius: 10px;
-    text-align: center;
-}
-
-.popup-content button {
-    background: #1db954;
-    border: none;
-    padding: 10px 20px;
-    color: #ffffff;
-    margin: 5px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.popup-content button:hover {
-    background: #17a34a;
-}
-
-.back-btn, .delete-btn {
-    background: none;
-    border: none;
-    color: #ffffff;
-    font-size: 1.2em;
-    cursor: pointer;
+.song-item m:before {
+    content: '/';
+    font-weight: 700;
+    color: #5c4763;
     margin-right: 10px;
 }
 
-.back-btn:hover, .delete-btn:hover {
-    color: #1db954;
-}
-
-.playlist-header {
+.botonmox {
+    width: 100%;
+    margin: auto;
     display: flex;
     align-items: center;
+    margin-top: 20px;
+    justify-content: center;
+    gap: 20px;
+}
+
+.botonmox a {
+    color: #5c4763;
+    font-size: 20px;
+    -webkit-text-stroke: 1px transparent;
+    transition: all ease-in-out 0.4s;
+}
+
+.botonmox a:hover {
+    -webkit-text-stroke: 1px #5c4763;
+    color: transparent;
+    transition: all ease-in-out 0.4s;
+}
+
+.bottomlyrm {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 6px;
+    color: #ccc;
+    position: relative;
+    top: -600px;
+    text-align: center;
+    line-height: 10px;
+    transition: all ease-in-out 0.8s;
+    transition-delay: 1s;
+}
+
+.moxybaul:hover .bottomlyrm {
+    filter: blur(10px);
+    opacity: 0;
+    transition: all ease-in-out 0.8s;
+}
+
+#content-area {
+    width: 100%;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #5c4763;
+    font-size: 16px;
+    cursor: pointer;
     margin-bottom: 10px;
 }
 
-.sortable {
-    list-style-type: none;
-    padding: 0;
+.back-btn:hover {
+    color: #ccc;
 }
 
-.sortable li {
-    cursor: move;
+.create-playlist-form,
+.search-songs-form,
+.add-song-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.create-playlist-form input,
+.search-songs-form input,
+.add-song-form input,
+.add-song-form select {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid #5c4763;
+    padding: 10px;
+    color: #ccc;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+}
+
+.create-playlist-form button,
+.search-songs-form button,
+.add-song-form button {
+    background: #5c4763;
+    border: none;
+    padding: 10px;
+    color: #ccc;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
+}
+
+.create-playlist-form button:hover,
+.search-songs-form button:hover,
+.add-song-form button:hover {
+    background: #ccc;
+    color: #5c4763;
+}
+
+.search-result {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 10px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    color: #ccc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-result:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.edit-playlist-actions {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.edit-playlist-actions button {
+    background: #5c4763;
+    border: none;
+    padding: 8px;
+    color: #ccc;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
+}
+
+.edit-playlist-actions button:hover {
+    background: #ccc;
+    color: #5c4763;
+}
+
+@font-face {
+    font-family: 'Chill';
+    font-style: normal;
+    font-weight: normal;
+    src: url('https://dl.dropbox.com/s/agpnu5irqlaaeco/Chillvornia%20Stamp%20Slant.otf') format('woff');
 }
