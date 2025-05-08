@@ -23,7 +23,8 @@ function initAudioPlayer() {
     });
     audioPlayer.addEventListener('error', (e) => {
         console.error("Audio playback error:", e);
-        document.getElementById('player-info').innerHTML = 'Error playing song, skipping...';
+        const playerInfo = document.getElementById('player-info');
+        if (playerInfo) playerInfo.innerHTML = 'Error playing song, skipping...';
         playNext();
     });
     audioPlayer.addEventListener('loadeddata', () => {
@@ -33,15 +34,21 @@ function initAudioPlayer() {
         updatePlayerUI();
     });
     audioPlayer.addEventListener('timeupdate', updateProgress);
-    audioPlayer.addEventListener('play', () => document.getElementById('play-pause').innerHTML = '<i class="fas fa-pause"></i>');
-    audioPlayer.addEventListener('pause', () => document.getElementById('play-pause').innerHTML = '<i class="fas fa-play"></i>');
+    audioPlayer.addEventListener('play', () => {
+        const playPause = document.getElementById('play-pause');
+        if (playPause) playPause.innerHTML = '<i class="fas fa-pause"></i>';
+    });
+    audioPlayer.addEventListener('pause', () => {
+        const playPause = document.getElementById('play-pause');
+        if (playPause) playPause.innerHTML = '<i class="fas fa-play"></i>';
+    });
 }
 
 function updateProgress() {
     const progress = document.getElementById('progress');
     const currentTime = document.getElementById('current-time');
     const duration = document.getElementById('duration');
-    if (audioPlayer.duration) {
+    if (progress && currentTime && duration && audioPlayer.duration) {
         progress.value = (audioPlayer.currentTime / audioPlayer.duration) * 100;
         currentTime.textContent = formatTime(audioPlayer.currentTime);
         duration.textContent = formatTime(audioPlayer.duration);
@@ -130,8 +137,10 @@ function stopPlayer() {
     console.log("stopPlayer called");
     audioPlayer.pause();
     audioPlayer.src = '';
-    document.getElementById('player-info').innerHTML = 'Select a song to play';
-    document.querySelector('.player-controls').classList.remove('active');
+    const playerInfo = document.getElementById('player-info');
+    const playerControls = document.querySelector('.player-controls');
+    if (playerInfo) playerInfo.innerHTML = 'Select a song to play';
+    if (playerControls) playerControls.classList.remove('active');
     songQueue = [];
     originalQueue = [];
     currentSongIndex = -1;
@@ -147,20 +156,22 @@ function togglePlayPause() {
 
 function seek(event) {
     const progress = document.getElementById('progress');
-    const seekPosition = (event.offsetX / progress.offsetWidth) * audioPlayer.duration;
-    audioPlayer.currentTime = seekPosition;
+    if (progress && audioPlayer.duration) {
+        const seekPosition = (event.target.value / 100) * audioPlayer.duration;
+        audioPlayer.currentTime = seekPosition;
+    }
 }
 
 function setVolume() {
     const volume = document.getElementById('volume');
-    audioPlayer.volume = volume.value / 100;
+    if (volume) audioPlayer.volume = volume.value / 100;
 }
 
 function toggleShuffle() {
     console.log("toggleShuffle called");
     isShuffling = !isShuffling;
     const shuffleBtn = document.getElementById('shuffle-btn');
-    shuffleBtn.classList.toggle('active', isShuffling);
+    if (shuffleBtn) shuffleBtn.classList.toggle('active', isShuffling);
     
     if (isShuffling) {
         if (songQueue.length > 0) {
@@ -404,7 +415,7 @@ function renamePlaylist(playlistId, currentName) {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.detail || 'Rename failed'); });
+            return response.json().then(err => { throw new Error(err.message || 'Rename failed'); });
         }
         return response.json();
     })
@@ -437,7 +448,7 @@ function showPlaylistSongs(playlistName) {
             <div class="playlist-header">
                 <button onclick="showMainPage()" class="back-btn"><i class="fas fa-arrow-left"></i></button>
                 <h2>Songs in ${playlistName}</h2>
-                <button onclick="deletePlaylist(${playlists.find(p => p.name === playlistName).id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+                <button onclick="deletePlaylist(${playlists.find(p => p.name === playlistName)?.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
             </div>
             <ul id="sortable-songs" class="sortable">`;
     if (playlistSongs.length === 0) {
@@ -463,9 +474,15 @@ function showPlaylistSongs(playlistName) {
 
 function createPlaylist() {
     console.log("createPlaylist called");
-    const playlistName = document.getElementById('new-playlist-name').value;
+    const playlistNameInput = document.getElementById('new-playlist-name');
+    if (!playlistNameInput) {
+        console.log("New playlist name input not found, skipping createPlaylist");
+        return;
+    }
+    const playlistName = playlistNameInput.value.trim();
     if (!playlistName) {
-        alert("Playlist name is empty. Proceeding to create playlist with empty name.");
+        alert("Playlist name cannot be empty.");
+        return;
     }
 
     fetch('/create_playlist', {
@@ -474,12 +491,14 @@ function createPlaylist() {
         body: `playlist_name=${encodeURIComponent(playlistName)}`
     })
     .then(response => {
-        if (!response.ok) throw new Error('Playlist creation failed');
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.message || 'Playlist creation failed'); });
+        }
         return response.json();
     })
     .then(data => {
         alert(data.message);
-        document.getElementById('new-playlist-name').value = '';
+        playlistNameInput.value = '';
         renderPlaylists();
     })
     .catch(error => {
@@ -491,7 +510,7 @@ function createPlaylist() {
 function addSongFromUrl(youtubeUrl, playlistName) {
     console.log("addSongFromUrl called with:", youtubeUrl, playlistName);
     if (!youtubeUrl || !playlistName) {
-        alert("Please select a playlist.");
+        alert("Please provide a YouTube URL and select a playlist.");
         return;
     }
 
@@ -577,6 +596,8 @@ function indexSongs() {
         .then(data => {
             allSongs = data.songs;
             console.log("Updated songs:", allSongs);
+            if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
+            else showMainPage();
         })
         .catch(error => console.error("Error indexing songs:", error));
 }
@@ -747,14 +768,14 @@ function search() {
 
 function showRecommendations() {
     console.log("showRecommendations called");
+    const queueList = document.getElementById('queue-list');
+    if (!queueList) {
+        console.log("Queue list container not found, skipping showRecommendations");
+        return;
+    }
     if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
         const currentSong = songQueue[currentSongIndex];
         const recommendations = recommendSongs(currentSong, allSongs, history);
-        const queueList = document.getElementById('queue-list');
-        if (!queueList) {
-            console.log("Queue list container not found, skipping showRecommendations");
-            return;
-        }
         queueList.innerHTML = '<h3>Recommendations</h3>';
         recommendations.forEach((song, index) => {
             const queueItem = document.createElement('div');
@@ -788,50 +809,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginForm) {
             loginForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const gmail = document.getElementById('login-gmail').value;
+                const username = document.getElementById('login-username').value;
                 const password = document.getElementById('login-password').value;
-                const response = await fetch('/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `gmail=${encodeURIComponent(gmail)}&password=${encodeURIComponent(password)}`
-                });
-                console.log('Login response status:', response.status);
-                if (response.status === 303) {
-                    console.log('Redirecting to /index.html');
-                    window.location.href = '/index.html';
-                } else {
-                    const errorData = await response.json();
-                    console.log('Login failed with response:', errorData);
-                    alert('Login failed: ' + (errorData.message || 'Unknown error'));
-                }
-            });
-        }
-    }
+                console.log(`Attempting login for username: ${username}`);
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+                    });
+                    console.log('Login response status:', response.status, 'Redirected:', response.redirected);
 
-    // Handle signup page logic
-    if (page === 'signup') {
-        const signupForm = document.getElementById('signup-form');
-        console.log("Signup form element:", signupForm);
+                    if (response.status === 303 || response.redirected) {
+                        console.log('Login successful, redirecting to /index.html');
+                        window.location.href = '/index.html';
+                        return; // Prevent further processing
+                    }
 
-        if (signupForm) {
-            signupForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const gmail = document.getElementById('signup-gmail').value;
-                const username = document.getElementById('signup-username').value;
-                const password = document.getElementById('signup-password').value;
-                const response = await fetch('/signup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `gmail=${encodeURIComponent(gmail)}&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-                });
-                console.log('Signup response status:', response.status);
-                if (response.status === 303) {
-                    console.log('Redirecting to /index.html');
-                    window.location.href = '/index.html';
-                } else {
-                    const errorData = await response.json();
-                    console.log('Signup failed with response:', errorData);
-                    alert('Signup failed: ' + (errorData.message || 'Unknown error'));
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        console.log('Login failed with response:', errorData);
+                        alert('Login failed: ' + (errorData.message || 'Unknown error'));
+                    } else {
+                        const text = await response.text();
+                        console.log('Non-JSON response received:', text);
+                        alert('Login failed: Server returned an unexpected response - ' + text.slice(0, 100));
+                        if (text.includes('<!DOCTYPE html>')) {
+                            console.log('Redirecting to /login due to HTML response');
+                            window.location.href = '/login';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error during login:', error);
+                    alert('An error occurred during login: ' + error.message);
                 }
             });
         }
@@ -840,7 +851,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle index page logic
     if (page === 'index') {
         console.log("Initializing index.html logic");
-        renderPlaylists();
+
+        // Fetch songs and initialize the page
         fetch('/songs')
             .then(response => response.json())
             .then(data => {
@@ -848,9 +860,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("Initial songs:", allSongs);
                 showMainPage();
                 renderQueue();
+                updatePlayerUI();
             })
             .catch(error => console.error("Error fetching songs:", error));
 
+        // Search functionality
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
             searchInput.addEventListener('keypress', (event) => {
@@ -860,6 +874,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        // Add recommend button
         const controls = document.querySelector('.controls');
         if (controls) {
             const recommendBtn = document.createElement('button');
@@ -869,10 +884,10 @@ document.addEventListener('DOMContentLoaded', () => {
             controls.appendChild(recommendBtn);
         }
 
+        // Queue resize functionality
         const queueResizeHandle = document.getElementById('queue-resize-handle');
         const queueCollapse = document.getElementById('queueCollapse');
         let isQueueDragging = false;
-
         if (queueResizeHandle && queueCollapse) {
             queueResizeHandle.addEventListener('mousedown', (e) => {
                 isQueueDragging = true;
@@ -888,8 +903,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function onQueueMouseMove(e) {
-            if (!isQueueDragging) return;
+            if (!isQueueDragging || !queueCollapse) return;
             const playerControls = document.querySelector('.player-controls');
+            if (!playerControls) return;
             const playerRect = playerControls.getBoundingClientRect();
             const newHeight = window.innerHeight - e.clientY - playerRect.height + queueCollapse.scrollHeight;
             const minHeight = 100;
@@ -898,9 +914,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function onQueueTouchMove(e) {
-            if (!isQueueDragging) return;
+            if (!isQueueDragging || !queueCollapse) return;
             const touch = e.touches[0];
             const playerControls = document.querySelector('.player-controls');
+            if (!playerControls) return;
             const playerRect = playerControls.getBoundingClientRect();
             const newHeight = window.innerHeight - touch.clientY - playerRect.height + queueCollapse.scrollHeight;
             const minHeight = 100;
@@ -920,10 +937,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.removeEventListener('touchend', onQueueTouchEnd);
         }
 
+        // Player resize functionality
         const playerResizeHandle = document.getElementById('player-resize-handle');
         const playerControls = document.querySelector('.player-controls');
         let isPlayerDragging = false;
-
         if (playerResizeHandle && playerControls) {
             playerResizeHandle.addEventListener('mousedown', (e) => {
                 isPlayerDragging = true;
@@ -939,7 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function onPlayerMouseMove(e) {
-            if (!isPlayerDragging) return;
+            if (!isPlayerDragging || !playerControls) return;
             const newHeight = window.innerHeight - e.clientY;
             const minHeight = 80;
             const maxHeight = 300;
@@ -947,7 +964,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         function onPlayerTouchMove(e) {
-            if (!isPlayerDragging) return;
+            if (!isPlayerDragging || !playerControls) return;
             const touch = e.touches[0];
             const newHeight = window.innerHeight - touch.clientY;
             const minHeight = 80;
