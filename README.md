@@ -5,4 +5,4 @@ The login page has been improved for faster and more secure access. Playback spe
 
 The smart shuffle feature has been upgraded to deliver smarter and more dynamic song selections, offering a fresh and personalized listening experience every time. Additionally, the queue list has been improved with new features that make it easier to view, edit, and manage your upcoming tracks.
 
-With these updates, this version offers a faster, smarter, and more responsive music listening experience for all users.
+With these updates, this version offers a faster, smarter, and more responsive music listening experience for all users.    

@@ -21,7 +21,7 @@ templates = Jinja2Templates(directory="templates")
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
-MUSIC_DIR = Path(r"C:\Users\Ashwa\Desktop\echo-main\Music")
+MUSIC_DIR = Path(r"C:\Users\Ashwa\Music\music")
 IMAGES_DIR = Path(r"C:\Users\Ashwa\Desktop\echo-main\static\images")
 IMAGES_DIR.mkdir(exist_ok=True)
 app.mount("/music", StaticFiles(directory=MUSIC_DIR), name="music")
@@ -428,5 +428,3 @@ if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000, reload=True, log_level="debug")
 
-    #git upload
-    
