@@ -15,7 +15,6 @@ body {
     margin: auto;
     border: 20px solid #080808;
     outline: 1px solid #111;
-    overflow: hidden;
     transition: all ease-in-out 1s;
 }
 
@@ -85,7 +84,12 @@ body {
     position: relative;
     bottom: -520px;
     transition: all ease-in-out 0.8s;
-    overflow-y: auto;
+    resize: both;
+    overflow: hidden;
+    min-width: 600px;
+    min-height: 450px;
+    max-width: 1000px;
+    max-height: 800px;
 }
 
 .moxybaul:hover .musicmox {
@@ -94,16 +98,54 @@ body {
     transition-delay: 0.8s;
 }
 
+.resize-handle {
+    width: 15px;
+    height: 15px;
+    background: #5c4763;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    cursor: se-resize;
+}
+
 .control-panel {
     width: 100%;
     text-align: center;
     margin-bottom: 20px;
 }
 
+.player-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
 #audio-player {
-    width: 100%;
+    width: 70%;
     background: rgba(0, 0, 0, 0.4);
     border: none;
+    color: #ccc;
+}
+
+#previous-btn,
+#next-btn,
+#shuffle-btn {
+    background: none;
+    border: none;
+    color: #5c4763;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all ease-in-out 0.3s;
+}
+
+#previous-btn:hover,
+#next-btn:hover,
+#shuffle-btn:hover {
+    color: #ccc;
+}
+
+#shuffle-btn.active {
     color: #ccc;
 }
 
@@ -114,7 +156,8 @@ body {
 }
 
 .playlists h2,
-.songs h2 {
+.songs h2,
+.queue-list h2 {
     color: #5c4763;
     font-size: 14px;
     width: 100%;
@@ -160,7 +203,8 @@ body {
     width: 100%;
 }
 
-.song-item {
+.song-item,
+.queue-item {
     width: 100%;
     display: flex;
     align-items: center;
@@ -172,17 +216,20 @@ body {
     transition: all ease-in-out 0.3s;
 }
 
-.song-item:hover {
+.song-item:hover,
+.queue-item:hover {
     background: rgba(255, 255, 255, 0.1);
 }
 
-.song-item i {
+.song-item i,
+.queue-item i {
     font-size: 20px;
     color: #ccc;
     padding: 10px;
 }
 
-.song-item span {
+.song-item span,
+.queue-item span {
     width: 70px;
     font-size: 11px;
     font-weight: 700;
@@ -192,23 +239,15 @@ body {
     transition: all ease-in-out 0.3s;
 }
 
-.song-item span:hover {
+.song-item span:hover,
+.queue-item span:hover {
     color: #ccc;
     transition: all ease-in-out 0.3s;
 }
 
-.song-item m {
-    font-size: 11px;
-    color: #999;
-    margin-left: 5px;
-    display: flex;
-}
-
-.song-item m:before {
-    content: '/';
-    font-weight: 700;
-    color: #5c4763;
-    margin-right: 10px;
+.queue-item.current {
+    font-weight: bold;
+    color: #1db954;
 }
 
 .botonmox {
@@ -257,7 +296,6 @@ body {
 #content-area {
     width: 100%;
     flex-grow: 1;
-    overflow-y: auto;
 }
 
 .back-btn {

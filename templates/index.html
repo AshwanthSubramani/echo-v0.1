@@ -20,10 +20,15 @@
             <div class="musicmox">
                 <div id="content-area">
                     <div class="control-panel">
-                        <audio id="audio-player" controls>
-                            <source id="audio-source" src="" type="audio/mpeg">
-                            Your browser does not support the audio element.
-                        </audio>
+                        <div class="player-controls">
+                            <button id="previous-btn" title="Previous Song"><i class="fas fa-backward"></i></button>
+                            <audio id="audio-player" controls>
+                                <source id="audio-source" src="" type="audio/mpeg">
+                                Your browser does not support the audio element.
+                            </audio>
+                            <button id="next-btn" title="Next Song"><i class="fas fa-forward"></i></button>
+                            <button id="shuffle-btn" title="Shuffle"><i class="fas fa-random"></i></button>
+                        </div>
                         <div class="song-info">
                             <span id="current-song-title">Select a song to play</span> - 
                             <span id="current-song-artist">Artist</span>
@@ -43,8 +48,10 @@
                     <a href="#" id="search-songs-btn" title="Search Songs"><i class="fas fa-search"></i></a>
                     <a href="#" id="add-song-btn" title="Add Song"><i class="fas fa-music"></i></a>
                     <a href="#" id="create-playlist-btn" title="Create Playlist"><i class="fas fa-plus"></i></a>
+                    <a href="#" id="queue-list-btn" title="Queue List"><i class="fas fa-list-music"></i></a>
                     <a href="/logout" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
                 </div>
+                <div class="resize-handle"></div>
             </div>
         </div>
         <div class="bottomlyrm">
