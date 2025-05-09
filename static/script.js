@@ -49,6 +49,23 @@ function initAudioPlayer() {
     });
 }
 
+function attachControlPanelListeners() {
+    console.log("Attaching control panel listeners");
+    const previousBtn = document.getElementById('previous-btn');
+    const playPauseBtn = document.getElementById('play-pause');
+    const nextBtn = document.getElementById('next-btn');
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const progress = document.getElementById('progress');
+    const volume = document.getElementById('volume');
+
+    if (previousBtn) previousBtn.addEventListener('click', playPrevious);
+    if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
+    if (nextBtn) nextBtn.addEventListener('click', playNext);
+    if (shuffleBtn) shuffleBtn.addEventListener('click', toggleShuffle);
+    if (progress) progress.addEventListener('input', seek);
+    if (volume) volume.addEventListener('input', setVolume);
+}
+
 function updateProgress() {
     const progress = document.getElementById('progress');
     const currentTime = document.getElementById('current-time');
@@ -157,6 +174,16 @@ function stopPlayer() {
     updatePlayerUI();
     updateProgress();
     console.log("Player stopped");
+}
+
+function clearQueue() {
+    console.log("clearQueue called");
+    stopPlayer();
+    songQueue = [];
+    originalQueue = [];
+    currentSongIndex = -1;
+    updatePlayerUI();
+    showQueueView();
 }
 
 function togglePlayPause() {
@@ -303,9 +330,9 @@ function showEditPlaylistPopup(playlistId, playlistName) {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -325,6 +352,7 @@ function showEditPlaylistPopup(playlistId, playlistName) {
             <button onclick="deletePlaylist(${playlistId})">Delete Playlist</button>
         </div>
     `;
+    attachControlPanelListeners();
 }
 
 function updatePlaylistImage(playlistId) {
@@ -417,9 +445,9 @@ function showPlaylistSongs(playlistName) {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -447,6 +475,7 @@ function showPlaylistSongs(playlistName) {
             `).join('')}
         </div>
     `;
+    attachControlPanelListeners();
     makeSortable();
 }
 
@@ -465,9 +494,9 @@ function createPlaylist() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -486,6 +515,7 @@ function createPlaylist() {
             <button type="submit">Create</button>
         </form>
     `;
+    attachControlPanelListeners();
 }
 
 function handleCreatePlaylist(event) {
@@ -519,9 +549,9 @@ function addSong() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -544,6 +574,7 @@ function addSong() {
             <button type="submit">Add Song</button>
         </form>
     `;
+    attachControlPanelListeners();
 }
 
 function handleAddSong(event) {
@@ -577,9 +608,9 @@ function showPlaylistsView() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -602,6 +633,7 @@ function showPlaylistsView() {
             `).join('')}
         </div>
     `;
+    attachControlPanelListeners();
 }
 
 function showSearchSongsView() {
@@ -619,9 +651,9 @@ function showSearchSongsView() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -641,6 +673,7 @@ function showSearchSongsView() {
         </form>
         <div id="search-results"></div>
     `;
+    attachControlPanelListeners();
 }
 
 function handleSearchSongs(event) {
@@ -679,9 +712,9 @@ function addSearchedSong(youtubeUrl) {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -704,6 +737,7 @@ function addSearchedSong(youtubeUrl) {
             <button type="submit">Add Song</button>
         </form>
     `;
+    attachControlPanelListeners();
 }
 
 function showQueueView() {
@@ -721,9 +755,9 @@ function showQueueView() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -737,6 +771,7 @@ function showQueueView() {
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
         <h2>Queue</h2>
+        <button class="clear-queue-btn" onclick="clearQueue()">Clear Queue</button>
         <div class="queue-list" id="queue-container">
             ${songQueue.length === 0 ? '<p>No songs in queue.</p>' : songQueue.map((song, index) => `
                 <div class="queue-item" draggable="true" data-id="${song.id}" data-index="${index}">
@@ -747,6 +782,7 @@ function showQueueView() {
             `).join('')}
         </div>
     `;
+    attachControlPanelListeners();
     makeSortable();
 }
 
@@ -800,7 +836,10 @@ function deleteSong(songId) {
 function makeSortable() {
     console.log("makeSortable called");
     const sortableList = document.getElementById('songs-container') || document.getElementById('queue-container');
-    if (!sortableList) return;
+    if (!sortableList) {
+        console.warn("Sortable container not found!");
+        return;
+    }
     new Sortable(sortableList, {
         animation: 150,
         onEnd: (evt) => {
@@ -811,24 +850,36 @@ function makeSortable() {
             }));
 
             if (sortableList.id === 'songs-container' && selectedPlaylist) {
-                const songIds = newOrder.map(item => item.id);
+                const songIds = newOrder.map(item => parseInt(item.id));
+                console.log("Reordering playlist:", selectedPlaylist, "New order:", songIds);
                 fetch('/rearrange_playlist', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to rearrange playlist: ' + response.statusText);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    console.log(data.message);
+                    console.log("Rearrange playlist success:", data.message);
                     fetchSongs();
                 })
-                .catch(error => console.error("Error rearranging playlist:", error));
+                .catch(error => {
+                    console.error("Error rearranging playlist:", error);
+                    alert("Failed to rearrange playlist: " + error.message);
+                    showPlaylistSongs(selectedPlaylist); // Revert UI on failure
+                });
             } else if (sortableList.id === 'queue-container') {
-                songQueue = newOrder.sort((a, b) => a.index - b.index).map(item => 
+                songQueue = newOrder.map(item => 
                     allSongs.find(s => s.id === parseInt(item.id))
-                );
+                ).filter(song => song !== undefined);
                 currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
+                if (currentSongIndex === -1 && songQueue.length > 0) currentSongIndex = 0;
                 originalQueue = [...songQueue];
+                console.log("Reordered queue:", songQueue, "New index:", currentSongIndex);
                 showQueueView();
             }
         }
@@ -910,10 +961,6 @@ function displaySongs() {
                 <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                 <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
             `;
-            songItem.addEventListener('dragstart', handleDragStart);
-            songItem.addEventListener('dragover', handleDragOver);
-            songItem.addEventListener('drop', handleDrop);
-            songItem.addEventListener('dragend', handleDragEnd);
             container.appendChild(songItem);
         });
     }
@@ -936,9 +983,9 @@ function showMainView() {
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                 <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
             </div>
             <div class="player-progress">
                 <span id="current-time">0:00</span>
@@ -959,6 +1006,7 @@ function showMainView() {
             <div class="song-list" id="songs-container"></div>
         </div>
     `;
+    attachControlPanelListeners();
     displayPlaylists();
     displaySongs();
 }
@@ -1019,7 +1067,7 @@ function updateSongOrder(containerId) {
     }));
 
     if (containerId === 'songs-container' && selectedPlaylist) {
-        const songIds = newOrder.map(item => item.id);
+        const songIds = newOrder.map(item => parseInt(item.id));
         fetch('/rearrange_playlist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1030,12 +1078,17 @@ function updateSongOrder(containerId) {
             console.log(data.message);
             fetchSongs();
         })
-        .catch(error => console.error("Error rearranging playlist:", error));
+        .catch(error => {
+            console.error("Error rearranging playlist:", error);
+            alert("Failed to rearrange playlist: " + error.message);
+            showPlaylistSongs(selectedPlaylist);
+        });
     } else if (containerId === 'queue-container') {
-        songQueue = newOrder.sort((a, b) => a.index - b.index).map(item => 
+        songQueue = newOrder.map(item => 
             allSongs.find(s => s.id === parseInt(item.id))
-        );
+        ).filter(song => song !== undefined);
         currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
+        if (currentSongIndex === -1 && songQueue.length > 0) currentSongIndex = 0;
         originalQueue = [...songQueue];
         showQueueView();
     }
@@ -1045,6 +1098,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
 
     initAudioPlayer();
+    attachControlPanelListeners();
     fetchSongs();
     fetchPlaylists();
 
@@ -1053,10 +1107,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-song-btn').addEventListener('click', addSong);
     document.getElementById('create-playlist-btn').addEventListener('click', createPlaylist);
     document.getElementById('queue-list-btn').addEventListener('click', showQueueView);
-    document.getElementById('previous-btn').addEventListener('click', playPrevious);
-    document.getElementById('next-btn').addEventListener('click', playNext);
-    document.getElementById('progress').addEventListener('input', seek);
-    document.getElementById('volume').addEventListener('input', setVolume);
 
     document.addEventListener('submit', (event) => {
         if (event.target.id === 'create-playlist-form') handleCreatePlaylist(event);

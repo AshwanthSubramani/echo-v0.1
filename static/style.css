@@ -372,7 +372,8 @@ body {
 
 .create-playlist-form button,
 .search-songs-form button,
-.add-song-form button {
+.add-song-form button,
+.clear-queue-btn {
     background: #5c4763;
     border: none;
     padding: 10px;
@@ -386,7 +387,8 @@ body {
 
 .create-playlist-form button:hover,
 .search-songs-form button:hover,
-.add-song-form button:hover {
+.add-song-form button:hover,
+.clear-queue-btn:hover {
     background: #ccc;
     color: #5c4763;
 }

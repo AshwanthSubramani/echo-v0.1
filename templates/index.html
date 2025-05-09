@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://kit-pro.fontawesome.com/releases/v5.13.0/css/pro.min.css" rel="stylesheet"/>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <link rel="icon" href="data:,">
 </head>
 <body>
     <div class="moxybaul">
@@ -20,7 +22,7 @@
             <div class="musicmox">
                 <div id="content-area">
                     <div class="control-panel">
-                        <audio id="audio-player" controls>
+                        <audio id="audio-player">
                             <source id="audio-source" src="" type="audio/mpeg">
                             Your browser does not support the audio element.
                         </audio>
@@ -30,9 +32,18 @@
                         </div>
                         <div class="player-controls">
                             <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
-                            <button id="play-pause" title="Play/Pause" onclick="togglePlayPause()"><i class="fas fa-play"></i></button>
+                            <button id="play-pause" title="Play/Pause"><i class="fas fa-play"></i></button>
                             <button id="next-btn" title="Next Song"><i class="fas fa-step-forward"></i></button>
-                            <button id="shuffle-btn" title="Toggle Shuffle" onclick="toggleShuffle()"><i class="fas fa-random"></i></button>
+                            <button id="shuffle-btn" title="Toggle Shuffle"><i class="fas fa-random"></i></button>
+                        </div>
+                        <div class="player-progress">
+                            <span id="current-time">0:00</span>
+                            <input type="range" id="progress" min="0" max="100" value="0">
+                            <span id="duration">0:00</span>
+                        </div>
+                        <div class="player-volume">
+                            <i class="fas fa-volume-up"></i>
+                            <input type="range" id="volume" min="0" max="100" value="100">
                         </div>
                     </div>
                     <div class="playlists">
