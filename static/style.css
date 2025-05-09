@@ -437,10 +437,12 @@ body {
     padding: 10px;
     background-color: rgba(40, 40, 40, 0.8);
     border-radius: 5px;
+    line-height: 0.1;
     width: 100%;
     text-align: center;
-    overflow: hidden; /* Prevent any scrolling */
-    height: 30px; /* Height for a single line, adjust based on font size */
+    overflow: hidden; /* Prevent scrolling */
+    height: 40px; /* Increased to ensure text is visible */
+    border: 1px solid #5c4763; /* Temporary border for debugging */
 }
 
 #lyrics-content {
@@ -451,7 +453,7 @@ body {
     margin: 0; /* Remove default margins */
     padding: 5px 0; /* Minimal padding for alignment */
     font-size: 12px; /* Match your app's font size */
-    line-height: 1; /* Ensure single line height */
+    line-height: 0.1; /* Slightly increased for better readability */
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
