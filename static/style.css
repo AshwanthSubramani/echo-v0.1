@@ -160,19 +160,34 @@ body {
     cursor: pointer;
 }
 
-.player-volume {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-    color: #ccc;
-    font-size: 14px;
+.lyrics-panel {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: rgba(40, 40, 40, 0.8);
+    border-radius: 5px;
+    width: 100%;
+    text-align: center;
+    overflow: hidden; /* Prevent scrolling */
+    height: 40px; /* Increased to ensure text is visible */
 }
 
-#volume {
-    width: 100px;
-    accent-color: #5c4763;
-    cursor: pointer;
+#lyrics-content {
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+#lyrics-content p {
+    margin: 0; /* Remove default margins */
+    padding: 5px 0; /* Minimal padding for alignment */
+    font-size: 13px; /* Match your app's font size */
+    line-height: 1.2; /* Slightly increased for better readability */
+    color: #ccc;
+    font-family: 'Rajdhani', sans-serif;
+    text-transform: uppercase;
+}
+
+#lyrics-content .current-lyric {
+    color: #5c4763; /* Highlight with your theme color */
+    font-weight: bold;
 }
 
 .playlists h2,
@@ -430,38 +445,6 @@ body {
 .edit-playlist-actions button:hover {
     background: #ccc;
     color: #5c4763;
-}
-
-.lyrics-panel {
-    margin: 10px 0;
-    padding: 10px;
-    background-color: rgba(40, 40, 40, 0.8);
-    border-radius: 5px;
-    line-height: 0.1;
-    width: 100%;
-    text-align: center;
-    overflow: hidden; /* Prevent scrolling */
-    height: 40px; /* Increased to ensure text is visible */
-    border: 1px solid #5c4763; /* Temporary border for debugging */
-}
-
-#lyrics-content {
-    white-space: nowrap; /* Prevent text wrapping */
-}
-
-#lyrics-content p {
-    margin: 0; /* Remove default margins */
-    padding: 5px 0; /* Minimal padding for alignment */
-    font-size: 12px; /* Match your app's font size */
-    line-height: 0.1; /* Slightly increased for better readability */
-    color: #ccc;
-    font-family: 'Rajdhani', sans-serif;
-    text-transform: uppercase;
-}
-
-#lyrics-content .current-lyric {
-    color: #5c4763; /* Highlight with your theme color */
-    font-weight: bold;
 }
 
 .upload-lyrics-btn {

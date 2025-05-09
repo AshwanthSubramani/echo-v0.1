@@ -61,7 +61,6 @@ function attachControlPanelListeners() {
     const nextBtn = document.getElementById('next-btn');
     const shuffleBtn = document.getElementById('shuffle-btn');
     const progress = document.getElementById('progress');
-    const volume = document.getElementById('volume');
 
     if (previousBtn) previousBtn.addEventListener('click', playPrevious);
     if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
@@ -71,7 +70,6 @@ function attachControlPanelListeners() {
         progress.addEventListener('input', seek);
         progress.addEventListener('change', seek);
     }
-    if (volume) volume.addEventListener('input', setVolume);
 }
 
 function updateProgress() {
@@ -225,11 +223,6 @@ function togglePlayPause() {
     }
 }
 
-function setVolume() {
-    const volume = document.getElementById('volume');
-    if (volume) audioPlayer.volume = volume.value / 100;
-}
-
 function toggleShuffle() {
     console.log("toggleShuffle called");
     isShuffling = !isShuffling;
@@ -361,9 +354,10 @@ function showEditPlaylistPopup(playlistId, playlistName) {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showPlaylistSongs('${playlistName.replace(/'/g, "\\'")}')"><i class="fas fa-arrow-left"></i> Back</button>
@@ -476,9 +470,10 @@ function showPlaylistSongs(playlistName) {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showPlaylistsView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -496,10 +491,6 @@ function showPlaylistSongs(playlistName) {
                     <button onclick="uploadLyrics(${song.id})" class="upload-lyrics-btn"><i class="fas fa-file-upload"></i> Upload Lyrics</button>
                 </div>
             `).join('')}
-        </div>
-        <div class="lyrics-panel" id="lyrics-panel">
-            <h3>Lyrics</h3>
-            <div id="lyrics-content"></div>
         </div>
     `;
     attachControlPanelListeners();
@@ -530,9 +521,10 @@ function createPlaylist() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -585,9 +577,10 @@ function addSong() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -644,9 +637,10 @@ function showPlaylistsView() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -687,9 +681,10 @@ function showSearchSongsView() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -748,9 +743,10 @@ function addSearchedSong(youtubeUrl) {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -791,9 +787,10 @@ function showQueueView() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <button class="back-btn" onclick="showMainView()"><i class="fas fa-arrow-left"></i> Back</button>
@@ -968,7 +965,6 @@ function fetchPlaylists() {
         })
         .catch(error => {
             console.error("Error fetching playlists:", error);
-            // Display an error message in the UI
             const container = document.getElementById('playlists-container');
             if (container) {
                 container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
@@ -1052,9 +1048,10 @@ function showMainView() {
                 <input type="range" id="progress" min="0" max="100" value="0">
                 <span id="duration">0:00</span>
             </div>
-            <div class="player-volume">
-                <i class="fas fa-volume-up"></i>
-                <input type="range" id="volume" min="0" max="100" value="100">
+            <div class="lyrics-panel" id="lyrics-panel">
+                <div id="lyrics-content">
+                    <p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>
+                </div>
             </div>
         </div>
         <div class="playlists">
@@ -1064,10 +1061,6 @@ function showMainView() {
         <div class="songs">
             <h2>Songs</h2>
             <div class="song-list" id="songs-container"></div>
-        </div>
-        <div class="lyrics-panel" id="lyrics-panel">
-            <h3>Lyrics</h3>
-            <div id="lyrics-content"></div>
         </div>
     `;
     attachControlPanelListeners();
@@ -1119,7 +1112,6 @@ function uploadLyrics(songId) {
                     if (songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) {
                         updateLyrics();
                     }
-                    // Refresh songs to get updated lyrics from the server
                     fetchSongs();
                 } else {
                     alert("Failed to upload lyrics: " + data.message);
@@ -1145,7 +1137,7 @@ function parseLrc(lyricsText) {
             const seconds = parseFloat(match[2]);
             const time = minutes * 60 + seconds;
             const text = match[3].trim();
-            if (!isNaN(time) && time >= 0 && time < 3600) { // Ensure time is reasonable (less than 1 hour)
+            if (!isNaN(time) && time >= 0 && time < 3600) {
                 parsed.push({ time, text });
             } else {
                 console.warn("Invalid timestamp in line, skipping:", line);
@@ -1154,7 +1146,6 @@ function parseLrc(lyricsText) {
             console.warn("Unrecognized line format, skipping:", line);
         }
     }
-    // Sort by timestamp to ensure correct order
     parsed.sort((a, b) => a.time - b.time);
     console.log("Parsed lyrics:", parsed);
     return parsed;
@@ -1183,7 +1174,6 @@ function updateLyrics() {
         return;
     }
 
-    // Log the range of timestamps in lyrics
     console.log("Lyrics for song:", lyrics);
     console.log("Lyrics timestamp range:", {
         first: lyrics[0].time,
@@ -1195,13 +1185,11 @@ function updateLyrics() {
     const songDuration = audioPlayer.duration || 0;
     console.log("Song duration:", songDuration, "seconds");
 
-    // Adjust offset based on song duration and LRC timestamps
     const lrcDuration = lyrics[lyrics.length - 1].time;
-    const offset = 0; // Manually adjust this if needed
+    const offset = 0;
     const adjustedTime = currentTime - offset;
     console.log("Current audio time:", currentTime, "Adjusted time:", adjustedTime);
 
-    // Find the current line
     let currentLineIndex = -1;
     for (let i = 0; i < lyrics.length; i++) {
         if (adjustedTime >= lyrics[i].time) {
@@ -1212,24 +1200,23 @@ function updateLyrics() {
     }
     console.log("Current line index:", currentLineIndex);
 
-    // If we're past the last lyric, set to the last line
     if (currentLineIndex === -1 && adjustedTime > lrcDuration) {
         currentLineIndex = lyrics.length - 1;
         console.log("Past last lyric, setting currentLineIndex to last line:", currentLineIndex);
     }
 
-    // Display only the current line
     let html = '';
     if (currentLineIndex >= 0 && currentLineIndex < lyrics.length) {
         html = `<p class="current-lyric">${lyrics[currentLineIndex].text}</p>`;
     } else {
         html = '<p>No lyrics at this time.</p>';
     }
+    console.log("Setting lyrics content to:", html);
     lyricsText.innerHTML = html;
 
-    // Remove scrolling logic since only one line is displayed
     console.log("Displaying single line at index:", currentLineIndex);
 }
+
 function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', event.target.dataset.id);
 }
