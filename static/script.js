@@ -9,6 +9,7 @@ let selectedPlaylist = null;
 let isShuffling = false;
 let originalQueue = [];
 let history = {};
+let lyricsData = {}; // Store lyrics by song ID
 
 function initAudioPlayer() {
     console.log("initAudioPlayer called");
@@ -37,8 +38,12 @@ function initAudioPlayer() {
         audioPlayer.play().catch(e => console.error("Play failed:", e));
         updateProgress();
         updatePlayerUI();
+        updateLyrics();
     });
-    audioPlayer.addEventListener('timeupdate', updateProgress);
+    audioPlayer.addEventListener('timeupdate', () => {
+        updateProgress();
+        updateLyrics();
+    });
     audioPlayer.addEventListener('play', () => {
         const playPause = document.getElementById('play-pause');
         if (playPause) playPause.innerHTML = '<i class="fas fa-pause"></i>';
@@ -64,7 +69,7 @@ function attachControlPanelListeners() {
     if (shuffleBtn) shuffleBtn.addEventListener('click', toggleShuffle);
     if (progress) {
         progress.addEventListener('input', seek);
-        progress.addEventListener('change', seek); // Handle clicks on the progress bar
+        progress.addEventListener('change', seek);
     }
     if (volume) volume.addEventListener('input', setVolume);
 }
@@ -105,6 +110,7 @@ function seek(event) {
     console.log("Seeking to position:", seekPosition, "seconds");
     audioPlayer.currentTime = seekPosition;
     updateProgress();
+    updateLyrics();
 }
 
 async function playSong(songId) {
@@ -196,6 +202,7 @@ function stopPlayer() {
     currentSongIndex = -1;
     updatePlayerUI();
     updateProgress();
+    updateLyrics();
     console.log("Player stopped");
 }
 
@@ -486,8 +493,13 @@ function showPlaylistSongs(playlistName) {
                     <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
                     <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                     <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+                    <button onclick="uploadLyrics(${song.id})" class="upload-lyrics-btn"><i class="fas fa-file-upload"></i> Upload Lyrics</button>
                 </div>
             `).join('')}
+        </div>
+        <div class="lyrics-panel" id="lyrics-panel">
+            <h3>Lyrics</h3>
+            <div id="lyrics-content"></div>
         </div>
     `;
     attachControlPanelListeners();
@@ -975,6 +987,7 @@ function displaySongs() {
                 <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
                 <button onclick="addToQueue(${song.id})"><i class="fas fa-plus"></i></button>
                 <button onclick="deleteSong(${song.id})" class="delete-btn"><i class="fas fa-trash"></i></button>
+                <button onclick="uploadLyrics(${song.id})" class="upload-lyrics-btn"><i class="fas fa-file-upload"></i> Upload Lyrics</button>
             `;
             container.appendChild(songItem);
         });
@@ -1020,6 +1033,10 @@ function showMainView() {
             <h2>Songs</h2>
             <div class="song-list" id="songs-container"></div>
         </div>
+        <div class="lyrics-panel" id="lyrics-panel">
+            <h3>Lyrics</h3>
+            <div id="lyrics-content"></div>
+        </div>
     `;
     attachControlPanelListeners();
     displayPlaylists();
@@ -1039,6 +1056,97 @@ function updatePlayerUI() {
         title.textContent = 'Select a song to play';
         artist.textContent = 'Artist';
     }
+}
+
+function uploadLyrics(songId) {
+    console.log("uploadLyrics called with songId:", songId);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.lrc';
+    input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            const formData = new FormData();
+            formData.append('song_id', songId);
+            formData.append('lyrics_file', file);
+            fetch('/upload_lyrics', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("Lyrics upload response:", data);
+                if (data.success) {
+                    alert("Lyrics uploaded successfully!");
+                    lyricsData[songId] = data.lyrics; // Store parsed lyrics
+                    if (songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) {
+                        updateLyrics();
+                    }
+                } else {
+                    alert("Failed to upload lyrics: " + data.message);
+                }
+            })
+            .catch(error => {
+                console.error("Error uploading lyrics:", error);
+                alert("Error uploading lyrics: " + error.message);
+            });
+        }
+    };
+    input.click();
+}
+
+function parseLrc(lyricsText) {
+    console.log("parseLrc called with text:", lyricsText);
+    const lines = lyricsText.split('\n').map(line => line.trim()).filter(line => line);
+    const parsed = [];
+    for (let line of lines) {
+        const match = line.match(/^\[(\d{2}):(\d{2}\.\d{2})\](.*)$/);
+        if (match) {
+            const minutes = parseInt(match[1], 10);
+            const seconds = parseFloat(match[2]);
+            const text = match[3].trim();
+            parsed.push({ time: minutes * 60 + seconds, text });
+        } else {
+            console.warn("Unrecognized line format:", line);
+        }
+    }
+    return parsed;
+}
+
+function updateLyrics() {
+    console.log("updateLyrics called");
+    const lyricsContent = document.getElementById('lyrics-content');
+    if (!lyricsContent || !audioPlayer || songQueue.length === 0 || currentSongIndex < 0) {
+        return;
+    }
+    const currentSongId = songQueue[currentSongIndex].id;
+    const lyrics = lyricsData[currentSongId];
+    if (!lyrics || !lyrics.length) {
+        lyricsContent.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
+        return;
+    }
+
+    const currentTime = audioPlayer.currentTime;
+    let currentLineIndex = -1;
+    for (let i = 0; i < lyrics.length; i++) {
+        if (currentTime >= lyrics[i].time) {
+            currentLineIndex = i;
+        } else {
+            break;
+        }
+    }
+
+    let html = '';
+    lyrics.forEach((line, index) => {
+        if (index === currentLineIndex) {
+            html += `<p class="current-lyric">${line.text}</p>`;
+        } else if (index === currentLineIndex + 1) {
+            html += `<p class="next-lyric">${line.text}</p>`;
+        } else {
+            html += `<p>${line.text}</p>`;
+        }
+    });
+    lyricsContent.innerHTML = html;
 }
 
 function handleDragStart(event) {
