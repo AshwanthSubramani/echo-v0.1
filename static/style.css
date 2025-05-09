@@ -433,39 +433,33 @@ body {
 }
 
 .lyrics-panel {
-    margin-top: 20px;
-    padding: 15px;
+    margin: 10px 0;
+    padding: 10px;
     background-color: rgba(40, 40, 40, 0.8);
     border-radius: 5px;
-    max-height: 200px;
-    overflow-y: auto;
     width: 100%;
+    text-align: center;
+    overflow: hidden; /* Prevent any scrolling */
+    height: 30px; /* Height for a single line, adjust based on font size */
 }
 
-.lyrics-panel h3 {
-    color: #5c4763;
-    font-size: 14px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #5c4763;
-    padding-bottom: 5px;
+#lyrics-content {
+    white-space: nowrap; /* Prevent text wrapping */
 }
 
 #lyrics-content p {
-    margin: 5px 0;
-    font-size: 12px;
-    line-height: 1.5;
+    margin: 0; /* Remove default margins */
+    padding: 5px 0; /* Minimal padding for alignment */
+    font-size: 12px; /* Match your app's font size */
+    line-height: 1; /* Ensure single line height */
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
 }
 
 #lyrics-content .current-lyric {
-    color: #5c4763;
+    color: #5c4763; /* Highlight with your theme color */
     font-weight: bold;
-}
-
-#lyrics-content .next-lyric {
-    color: #999;
 }
 
 .upload-lyrics-btn {

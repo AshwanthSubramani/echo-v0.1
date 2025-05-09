@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from typing import List, Dict
 import hashlib
 import json
 import sqlite3
@@ -11,10 +12,67 @@ import os
 import shutil
 import uuid
 import logging
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Initialize database and index songs at module load
+DB_PATH = Path("songs.db")
+DEFAULT_IMAGE = "default.jpg"
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    
+    # Create tables if they don't exist
+    c.execute('''CREATE TABLE IF NOT EXISTS songs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        artist TEXT,
+        filename TEXT NOT NULL UNIQUE,
+        playlist TEXT,
+        position INTEGER,
+        lyrics_text TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS playlists (
+        name TEXT,
+        image_path TEXT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT
+    )''')
+    conn.commit()
+    conn.close()
+    logger.debug("Database initialized")
+
+def index_songs():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    MUSIC_DIR = Path(r"C:\Users\Ashwa\Music\music")
+    if not MUSIC_DIR.exists():
+        MUSIC_DIR.mkdir(parents=True)
+        logger.debug(f"Created music directory {MUSIC_DIR}")
+    for playlist_dir in MUSIC_DIR.iterdir():
+        if playlist_dir.is_dir():
+            playlist_name = playlist_dir.name
+            c.execute("SELECT COUNT(*) FROM playlists WHERE name = ?", (playlist_name,))
+            if c.fetchone()[0] == 0:
+                c.execute("INSERT INTO playlists (name, image_path) VALUES (?, ?)", (playlist_name, DEFAULT_IMAGE))
+                logger.debug(f"Added playlist {playlist_name} to database")
+            songs = sorted(playlist_dir.glob("*.mp3"))
+            for position, file in enumerate(songs):
+                filename = f"{playlist_name}/{file.name}"
+                title = file.name.replace(".mp3", "").split(" - ")[0] if " - " in file.name else file.name.replace(".mp3", "")
+                artist = file.name.split(" - ")[1].replace(".mp3", "") if " - " in file.name and len(file.name.split(" - ")) > 1 else "Unknown"
+                c.execute("INSERT OR IGNORE INTO songs (title, artist, filename, playlist, position) VALUES (?, ?, ?, ?, ?)", 
+                         (title, artist, filename, playlist_name, position))
+                logger.debug(f"Indexed: {filename} in playlist {playlist_name} at position {position}")
+    conn.commit()
+    conn.close()
+
+# Initialize database and index songs
+init_db()
+index_songs()
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -62,57 +120,28 @@ def save_users():
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
-# Database setup for songs and playlists
-DB_PATH = Path("songs.db")
-DEFAULT_IMAGE = "default.jpg"
-
-def init_db():
-    if not DB_PATH.exists():
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''CREATE TABLE songs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            artist TEXT,
-            filename TEXT NOT NULL UNIQUE,
-            playlist TEXT,
-            position INTEGER
-        )''')
-        c.execute('''CREATE TABLE playlists (
-            name TEXT,
-            image_path TEXT,
-            id INTEGER PRIMARY KEY AUTOINCREMENT
-        )''')
-        conn.commit()
-        conn.close()
-        logger.debug("Database initialized")
-
-def index_songs():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    if not MUSIC_DIR.exists():
-        MUSIC_DIR.mkdir(parents=True)
-        logger.debug(f"Created music directory {MUSIC_DIR}")
-    for playlist_dir in MUSIC_DIR.iterdir():
-        if playlist_dir.is_dir():
-            playlist_name = playlist_dir.name
-            c.execute("SELECT COUNT(*) FROM playlists WHERE name = ?", (playlist_name,))
-            if c.fetchone()[0] == 0:
-                c.execute("INSERT INTO playlists (name, image_path) VALUES (?, ?)", (playlist_name, DEFAULT_IMAGE))
-                logger.debug(f"Added playlist {playlist_name} to database")
-            songs = sorted(playlist_dir.glob("*.mp3"))
-            for position, file in enumerate(songs):
-                filename = f"{playlist_name}/{file.name}"
-                title = file.name.replace(".mp3", "").split(" - ")[0] if " - " in file.name else file.name.replace(".mp3", "")
-                artist = file.name.split(" - ")[1].replace(".mp3", "") if " - " in file.name and len(file.name.split(" - ")) > 1 else "Unknown"
-                c.execute("INSERT OR IGNORE INTO songs (title, artist, filename, playlist, position) VALUES (?, ?, ?, ?, ?)", 
-                         (title, artist, filename, playlist_name, position))
-                logger.debug(f"Indexed: {filename} in playlist {playlist_name} at position {position}")
-    conn.commit()
-    conn.close()
-
-init_db()
-index_songs()
+def parse_lyrics(lyrics_text: str) -> List[Dict[str, float | str]]:
+    lines = lyrics_text.split('\n')
+    parsed_lyrics = []
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        match = re.match(r'^\[(\d{2}):(\d{2}\.\d{2})\](.*)$', line)
+        if match:
+            minutes = int(match.group(1))
+            seconds = float(match.group(2))
+            text = match.group(3).strip()
+            time = minutes * 60 + seconds
+            if 0 <= time < 3600:  # Ensure time is reasonable (less than 1 hour)
+                parsed_lyrics.append({"time": time, "text": text})
+            else:
+                logger.warning(f"Invalid timestamp {time} seconds in line: {line}, skipping")
+        else:
+            logger.warning(f"Unrecognized line format, skipping: {line}")
+    # Sort by timestamp to ensure correct order
+    parsed_lyrics.sort(key=lambda x: x["time"])
+    return parsed_lyrics
 
 # Routes
 @app.get("/", response_class=HTMLResponse)
@@ -158,11 +187,35 @@ async def logout(request: Request):
 async def get_songs():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute("SELECT id, title, artist, filename, playlist, position FROM songs ORDER BY playlist, position")
-    songs = [{"id": row[0], "title": row[1], "artist": row[2], "url": f"/music/{row[3]}", "playlist": row[4], "position": row[5]} for row in c.fetchall()]
+    c.execute("SELECT id, title, artist, filename, playlist, position, lyrics_text FROM songs ORDER BY playlist, position")
+    songs = []
+    for row in c.fetchall():
+        lyrics = row[6]
+        if lyrics:
+            try:
+                lyrics_data = json.loads(lyrics)
+                # Ensure all times are valid floats
+                for lyric in lyrics_data:
+                    if not isinstance(lyric.get("time"), (int, float)) or lyric["time"] < 0 or lyric["time"] >= 3600:
+                        logger.warning(f"Invalid time value {lyric.get('time')} for song id {row[0]}, resetting to 0")
+                        lyric["time"] = 0
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse lyrics for song id {row[0]}: {e}")
+                lyrics_data = None
+        else:
+            lyrics_data = None
+        songs.append({
+            "id": row[0],
+            "title": row[1],
+            "artist": row[2],
+            "url": f"/music/{row[3]}",
+            "playlist": row[4],
+            "position": row[5],
+            "lyrics": lyrics_data
+        })
     conn.close()
     logger.debug(f"Fetched {len(songs)} songs")
-    return {"songs": songs}
+    return JSONResponse(content=songs)
 
 @app.get("/playlists")
 async def get_playlists():
@@ -423,6 +476,50 @@ async def search_youtube(query: str):
     except Exception as e:
         logger.error(f"Failed to search YouTube: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to search YouTube: {str(e)}")
+
+@app.post("/upload_lyrics")
+async def upload_lyrics(request: Request, song_id: int = Form(...), lyrics_file: UploadFile = File(...)):
+    """Handle lyrics file upload and store them in the database."""
+    # Verify user session
+    username = request.cookies.get("session_username")
+    if not username or username not in users:
+        logger.warning("Unauthorized lyrics upload attempt")
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    # Read the contents of the uploaded file
+    try:
+        lyrics_text = await lyrics_file.read()
+        lyrics_text = lyrics_text.decode('utf-8')  # Decode bytes to string
+    except Exception as e:
+        logger.warning(f"Failed to read lyrics file for song_id {song_id}: {str(e)}")
+        return JSONResponse(status_code=400, content={"success": False, "message": "Failed to read the lyrics file"})
+
+    if not lyrics_text.strip():
+        logger.warning(f"Empty lyrics file uploaded for song_id {song_id}")
+        return JSONResponse(status_code=400, content={"success": False, "message": "Lyrics file cannot be empty"})
+
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT id FROM songs WHERE id = ?", (song_id,))
+    if not c.fetchone():
+        conn.close()
+        logger.warning(f"Song with id {song_id} not found")
+        raise HTTPException(status_code=404, detail="Song not found")
+
+    # Parse the lyrics (support .lrc format or plain text)
+    parsed_lyrics = parse_lyrics(lyrics_text)
+    lyrics_json = json.dumps(parsed_lyrics)  # Store as JSON for flexibility
+
+    c.execute("UPDATE songs SET lyrics_text = ? WHERE id = ?", (lyrics_json, song_id))
+    conn.commit()
+    conn.close()
+    logger.debug(f"Updated lyrics for song_id {song_id} from uploaded file")
+
+    return JSONResponse({
+        "success": True,
+        "message": "Lyrics uploaded successfully",
+        "lyrics": parsed_lyrics
+    })
 
 if __name__ == "__main__":
     import uvicorn

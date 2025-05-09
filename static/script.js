@@ -916,32 +916,64 @@ function makeSortable() {
 function fetchSongs() {
     console.log("fetchSongs called");
     fetch('/songs')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            allSongs = data.songs.map(song => {
-                console.log("Fetched song:", song);
-                if (!song.url) {
-                    console.warn("Song missing URL:", song);
+            console.log("Fetched songs data:", data);
+            if (!Array.isArray(data)) {
+                throw new Error('Expected an array of songs, but received: ' + JSON.stringify(data));
+            }
+            allSongs = data.map(song => {
+                console.log("Processing song:", song);
+                if (song.lyrics && Array.isArray(song.lyrics)) {
+                    lyricsData[song.id] = song.lyrics;
+                    console.log("Updated lyricsData for song", song.id, ":", song.lyrics.slice(0, 5)); // Log first 5 lines
                 }
                 return song;
             });
-            console.log("Updated songs:", allSongs);
+            console.log("Updated allSongs:", allSongs);
+            console.log("Updated lyricsData:", lyricsData);
             if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
             else displaySongs();
         })
-        .catch(error => console.error("Error fetching songs:", error));
+        .catch(error => {
+            console.error("Error fetching songs:", error);
+            const container = document.getElementById('songs-container');
+            if (container) {
+                container.innerHTML = `<p>Error loading songs: ${error.message}</p>`;
+            }
+        });
 }
 
 function fetchPlaylists() {
     console.log("fetchPlaylists called");
     fetch('/playlists')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!Array.isArray(data.playlists)) {
+                throw new Error('Expected playlists to be an array');
+            }
             playlists = data.playlists;
             console.log("Updated playlists:", playlists);
             displayPlaylists();
         })
-        .catch(error => console.error("Error fetching playlists:", error));
+        .catch(error => {
+            console.error("Error fetching playlists:", error);
+            // Display an error message in the UI
+            const container = document.getElementById('playlists-container');
+            if (container) {
+                container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
+            }
+        });
 }
 
 function displayPlaylists() {
@@ -1073,7 +1105,12 @@ function uploadLyrics(songId) {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log("Lyrics upload response:", data);
                 if (data.success) {
@@ -1082,6 +1119,8 @@ function uploadLyrics(songId) {
                     if (songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) {
                         updateLyrics();
                     }
+                    // Refresh songs to get updated lyrics from the server
+                    fetchSongs();
                 } else {
                     alert("Failed to upload lyrics: " + data.message);
                 }
@@ -1104,51 +1143,93 @@ function parseLrc(lyricsText) {
         if (match) {
             const minutes = parseInt(match[1], 10);
             const seconds = parseFloat(match[2]);
+            const time = minutes * 60 + seconds;
             const text = match[3].trim();
-            parsed.push({ time: minutes * 60 + seconds, text });
+            if (!isNaN(time) && time >= 0 && time < 3600) { // Ensure time is reasonable (less than 1 hour)
+                parsed.push({ time, text });
+            } else {
+                console.warn("Invalid timestamp in line, skipping:", line);
+            }
         } else {
-            console.warn("Unrecognized line format:", line);
+            console.warn("Unrecognized line format, skipping:", line);
         }
     }
+    // Sort by timestamp to ensure correct order
+    parsed.sort((a, b) => a.time - b.time);
+    console.log("Parsed lyrics:", parsed);
     return parsed;
 }
 
 function updateLyrics() {
     console.log("updateLyrics called");
-    const lyricsContent = document.getElementById('lyrics-content');
-    if (!lyricsContent || !audioPlayer || songQueue.length === 0 || currentSongIndex < 0) {
+    const lyricsContent = document.getElementById('lyrics-panel');
+    const lyricsText = document.getElementById('lyrics-content');
+    if (!lyricsContent || !lyricsText || !audioPlayer || songQueue.length === 0 || currentSongIndex < 0) {
+        console.warn("updateLyrics: Missing required elements or state", {
+            lyricsContent: !!lyricsContent,
+            lyricsText: !!lyricsText,
+            audioPlayer: !!audioPlayer,
+            songQueue: songQueue.length,
+            currentSongIndex: currentSongIndex
+        });
         return;
     }
     const currentSongId = songQueue[currentSongIndex].id;
+    console.log("Current song ID:", currentSongId);
     const lyrics = lyricsData[currentSongId];
     if (!lyrics || !lyrics.length) {
-        lyricsContent.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
+        console.log("No lyrics available for song ID:", currentSongId);
+        lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
         return;
     }
 
+    // Log the range of timestamps in lyrics
+    console.log("Lyrics for song:", lyrics);
+    console.log("Lyrics timestamp range:", {
+        first: lyrics[0].time,
+        last: lyrics[lyrics.length - 1].time,
+        totalLines: lyrics.length
+    });
+
     const currentTime = audioPlayer.currentTime;
+    const songDuration = audioPlayer.duration || 0;
+    console.log("Song duration:", songDuration, "seconds");
+
+    // Adjust offset based on song duration and LRC timestamps
+    const lrcDuration = lyrics[lyrics.length - 1].time;
+    const offset = 0; // Manually adjust this if needed
+    const adjustedTime = currentTime - offset;
+    console.log("Current audio time:", currentTime, "Adjusted time:", adjustedTime);
+
+    // Find the current line
     let currentLineIndex = -1;
     for (let i = 0; i < lyrics.length; i++) {
-        if (currentTime >= lyrics[i].time) {
+        if (adjustedTime >= lyrics[i].time) {
             currentLineIndex = i;
         } else {
             break;
         }
     }
+    console.log("Current line index:", currentLineIndex);
 
+    // If we're past the last lyric, set to the last line
+    if (currentLineIndex === -1 && adjustedTime > lrcDuration) {
+        currentLineIndex = lyrics.length - 1;
+        console.log("Past last lyric, setting currentLineIndex to last line:", currentLineIndex);
+    }
+
+    // Display only the current line
     let html = '';
-    lyrics.forEach((line, index) => {
-        if (index === currentLineIndex) {
-            html += `<p class="current-lyric">${line.text}</p>`;
-        } else if (index === currentLineIndex + 1) {
-            html += `<p class="next-lyric">${line.text}</p>`;
-        } else {
-            html += `<p>${line.text}</p>`;
-        }
-    });
-    lyricsContent.innerHTML = html;
-}
+    if (currentLineIndex >= 0 && currentLineIndex < lyrics.length) {
+        html = `<p class="current-lyric">${lyrics[currentLineIndex].text}</p>`;
+    } else {
+        html = '<p>No lyrics at this time.</p>';
+    }
+    lyricsText.innerHTML = html;
 
+    // Remove scrolling logic since only one line is displayed
+    console.log("Displaying single line at index:", currentLineIndex);
+}
 function handleDragStart(event) {
     event.dataTransfer.setData('text/plain', event.target.dataset.id);
 }
@@ -1196,7 +1277,12 @@ function updateSongOrder(containerId) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log(data.message);
             fetchSongs();
