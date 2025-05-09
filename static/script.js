@@ -62,7 +62,10 @@ function attachControlPanelListeners() {
     if (playPauseBtn) playPauseBtn.addEventListener('click', togglePlayPause);
     if (nextBtn) nextBtn.addEventListener('click', playNext);
     if (shuffleBtn) shuffleBtn.addEventListener('click', toggleShuffle);
-    if (progress) progress.addEventListener('input', seek);
+    if (progress) {
+        progress.addEventListener('input', seek);
+        progress.addEventListener('change', seek); // Handle clicks on the progress bar
+    }
     if (volume) volume.addEventListener('input', setVolume);
 }
 
@@ -82,6 +85,26 @@ function formatTime(seconds) {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+function seek(event) {
+    console.log("seek called with event value:", event.target.value);
+    const progress = document.getElementById('progress');
+    if (!progress) {
+        console.error("Progress element not found!");
+        return;
+    }
+    if (!audioPlayer || isNaN(audioPlayer.duration) || audioPlayer.duration === 0) {
+        console.warn("Cannot seek: Audio duration is invalid or audio is not loaded.", {
+            duration: audioPlayer.duration,
+            readyState: audioPlayer.readyState
+        });
+        return;
+    }
+    const seekPosition = (event.target.value / 100) * audioPlayer.duration;
+    console.log("Seeking to position:", seekPosition, "seconds");
+    audioPlayer.currentTime = seekPosition;
+    updateProgress();
 }
 
 async function playSong(songId) {
@@ -192,14 +215,6 @@ function togglePlayPause() {
         audioPlayer.play().catch(e => console.error("Play failed:", e));
     } else {
         audioPlayer.pause();
-    }
-}
-
-function seek(event) {
-    const progress = document.getElementById('progress');
-    if (progress && audioPlayer.duration) {
-        const seekPosition = (event.target.value / 100) * audioPlayer.duration;
-        audioPlayer.currentTime = seekPosition;
     }
 }
 
