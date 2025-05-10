@@ -3,6 +3,7 @@ console.log("Script loaded - Starting execution");
 let audioPlayer;
 let songQueue = [];
 let currentSongIndex = -1;
+let currentSong = null; // Store the currently playing song independently
 let allSongs = [];
 let playlists = [];
 let selectedPlaylist = null;
@@ -125,6 +126,7 @@ async function playSong(songId) {
     songQueue = playlistSongs;
     originalQueue = [...playlistSongs];
     currentSongIndex = playlistSongs.findIndex(s => s.id === song.id);
+    currentSong = song; // Store the current song
     if (isShuffling) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
@@ -148,18 +150,23 @@ function addToQueue(songId) {
     const song = allSongs.find(s => s.id === parseInt(songId));
     if (!song) return;
 
-    if (songQueue.length === 0) {
+    // If there's a song playing, just add to the queue without interrupting
+    if (currentSong || audioPlayer.src) {
+        songQueue.push(song);
+        originalQueue.push(song);
+        console.log("Song added to queue, current song continues playing:", song);
+    } else {
+        // If no song is playing, start playing the added song
         songQueue = [song];
         originalQueue = [song];
         currentSongIndex = 0;
+        currentSong = song;
         audioPlayer.src = song.url;
         audioPlayer.load();
-    } else {
-        songQueue.push(song);
-        originalQueue.push(song);
+        console.log("No song was playing, starting playback with:", song);
     }
     updatePlayerUI();
-    console.log("Added to queue:", song, "Queue:", songQueue);
+    console.log("Queue after adding:", songQueue);
 }
 
 function playNext() {
@@ -167,6 +174,7 @@ function playNext() {
     currentSongIndex++;
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
+        currentSong = nextSong; // Store the current song
         audioPlayer.src = nextSong.url;
         audioPlayer.load();
         updatePlayerUI();
@@ -182,6 +190,7 @@ function playPrevious() {
     currentSongIndex--;
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
+        currentSong = prevSong; // Store the current song
         audioPlayer.src = prevSong.url;
         audioPlayer.load();
         updatePlayerUI();
@@ -193,6 +202,7 @@ function stopPlayer() {
     console.log("stopPlayer called");
     audioPlayer.pause();
     audioPlayer.src = '';
+    currentSong = null; // Clear the current song
     const playerInfo = document.getElementById('current-song-title');
     if (playerInfo) playerInfo.textContent = 'Select a song to play';
     songQueue = [];
@@ -1072,10 +1082,13 @@ function updatePlayerUI() {
     const title = document.getElementById('current-song-title');
     const artist = document.getElementById('current-song-artist');
     if (!title || !artist) return;
-    if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
-        const currentSong = songQueue[currentSongIndex];
+    if (currentSong) {
         title.textContent = currentSong.title;
         artist.textContent = currentSong.artist;
+    } else if (songQueue.length > 0 && currentSongIndex >= 0 && currentSongIndex < songQueue.length) {
+        const currentSongFromQueue = songQueue[currentSongIndex];
+        title.textContent = currentSongFromQueue.title;
+        artist.textContent = currentSongFromQueue.artist;
     } else {
         title.textContent = 'Select a song to play';
         artist.textContent = 'Artist';
@@ -1108,7 +1121,7 @@ function uploadLyrics(songId) {
                 if (data.success) {
                     alert("Lyrics uploaded successfully!");
                     lyricsData[songId] = data.lyrics; // Store parsed lyrics
-                    if (songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) {
+                    if ((songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) || (currentSong && currentSong.id === songId)) {
                         updateLyrics();
                     }
                     fetchSongs();
@@ -1154,18 +1167,21 @@ function updateLyrics() {
     console.log("updateLyrics called");
     const lyricsContent = document.getElementById('lyrics-panel');
     const lyricsText = document.getElementById('lyrics-content');
-    if (!lyricsContent || !lyricsText || !audioPlayer || songQueue.length === 0 || currentSongIndex < 0) {
+    if (!lyricsContent || !lyricsText || !audioPlayer) {
         console.warn("updateLyrics: Missing required elements or state", {
             lyricsContent: !!lyricsContent,
             lyricsText: !!lyricsText,
-            audioPlayer: !!audioPlayer,
-            songQueue: songQueue.length,
-            currentSongIndex: currentSongIndex
+            audioPlayer: !!audioPlayer
         });
         return;
     }
-    const currentSongId = songQueue[currentSongIndex].id;
+    const currentSongId = currentSong ? currentSong.id : (songQueue.length > 0 && currentSongIndex >= 0 ? songQueue[currentSongIndex].id : null);
     console.log("Current song ID:", currentSongId);
+    if (!currentSongId) {
+        console.log("No current song to display lyrics for");
+        lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
+        return;
+    }
     const lyrics = lyricsData[currentSongId];
     if (!lyrics || !lyrics.length) {
         console.log("No lyrics available for song ID:", currentSongId);
