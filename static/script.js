@@ -206,7 +206,6 @@ function stopPlayer() {
 
 function clearQueue() {
     console.log("clearQueue called");
-    stopPlayer();
     songQueue = [];
     originalQueue = [];
     currentSongIndex = -1;
