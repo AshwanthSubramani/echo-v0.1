@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Form, File, UploadFile, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -75,6 +76,17 @@ init_db()
 index_songs()
 
 app = FastAPI()
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for testing (restrict in production)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 templates = Jinja2Templates(directory="templates")
 
 # Mount static files
@@ -159,14 +171,14 @@ async def login(request: Request, username: str = Form(...), password: str = For
     logger.debug(f"Login attempt with username: {username}")
     hashed_password = hash_password(password)
     if username in users and users[username]["password"] == hashed_password:
-        logger.debug(f"Login successful for username: {username}, redirecting to /index.html")
-        response = RedirectResponse(url="/index.html", status_code=303)
+        logger.debug(f"Login successful for username: {username}, redirecting to /index")
+        response = RedirectResponse(url="/index", status_code=303)  # Change to /index route
         response.set_cookie(key="session_username", value=username, httponly=True, max_age=3600, samesite="Lax")
         return response
     logger.warning(f"Login failed for username: {username} - Invalid credentials")
     return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials, try again"})
 
-@app.get("/index.html", response_class=HTMLResponse)
+@app.get("/index", response_class=HTMLResponse)
 async def index(request: Request):
     username = request.cookies.get("session_username")
     logger.debug(f"Session cookie username: {username}")

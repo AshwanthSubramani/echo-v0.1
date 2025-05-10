@@ -150,13 +150,11 @@ function addToQueue(songId) {
     const song = allSongs.find(s => s.id === parseInt(songId));
     if (!song) return;
 
-    // If there's a song playing, just add to the queue without interrupting
     if (currentSong || audioPlayer.src) {
         songQueue.push(song);
         originalQueue.push(song);
         console.log("Song added to queue, current song continues playing:", song);
     } else {
-        // If no song is playing, start playing the added song
         songQueue = [song];
         originalQueue = [song];
         currentSongIndex = 0;
@@ -296,7 +294,7 @@ function smartShuffle(songs, currentSong = null) {
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = randomInt(0, i);
-        [array[i], array[j]] = [array[j], array[i]];
+        [array[i], array[j] = [array[j], array[i]]];
     }
     return array;
 }
@@ -868,60 +866,68 @@ function deleteSong(songId) {
 
 function makeSortable() {
     console.log("makeSortable called");
-    const sortableList = document.getElementById('songs-container') || document.getElementById('queue-container');
-    if (!sortableList) {
-        console.warn("Sortable container not found!");
-        return;
-    }
-    new Sortable(sortableList, {
-        animation: 150,
-        onEnd: (evt) => {
-            const items = Array.from(sortableList.children);
-            const newOrder = items.map((item, index) => ({
-                id: item.dataset.id,
-                index: parseInt(item.dataset.index) || index
-            }));
-
-            if (sortableList.id === 'songs-container' && selectedPlaylist) {
-                const songIds = newOrder.map(item => parseInt(item.id));
-                console.log("Reordering playlist:", selectedPlaylist, "New order:", songIds);
-                fetch('/rearrange_playlist', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Failed to rearrange playlist: ' + response.statusText);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Rearrange playlist success:", data.message);
-                    fetchSongs();
-                })
-                .catch(error => {
-                    console.error("Error rearranging playlist:", error);
-                    alert("Failed to rearrange playlist: " + error.message);
-                    showPlaylistSongs(selectedPlaylist); // Revert UI on failure
-                });
-            } else if (sortableList.id === 'queue-container') {
-                songQueue = newOrder.map(item => 
-                    allSongs.find(s => s.id === parseInt(item.id))
-                ).filter(song => song !== undefined);
-                currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
-                if (currentSongIndex === -1 && songQueue.length > 0) currentSongIndex = 0;
-                originalQueue = [...songQueue];
-                console.log("Reordered queue:", songQueue, "New index:", currentSongIndex);
-                showQueueView();
-            }
+    const containers = [
+        document.getElementById('songs-container'),
+        document.getElementById('queue-container')
+    ];
+    containers.forEach(container => {
+        if (!container) {
+            console.warn("Sortable container not found:", container);
+            return;
         }
+        new Sortable(container, {
+            animation: 150, // Smooth animation for reordering
+            delay: 500, // Require a 500ms long press to start dragging
+            delayOnTouchOnly: true, // Only apply delay on touch devices
+            touchStartThreshold: 5, // Allow small movements (5px) before starting drag
+            onEnd: (evt) => {
+                const items = Array.from(container.children);
+                const newOrder = items.map((item, index) => ({
+                    id: item.dataset.id,
+                    index: parseInt(item.dataset.index) || index
+                }));
+
+                if (container.id === 'songs-container' && selectedPlaylist) {
+                    const songIds = newOrder.map(item => parseInt(item.id));
+                    console.log("Reordering playlist:", selectedPlaylist, "New order:", songIds);
+                    fetch('/rearrange_playlist', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to rearrange playlist: ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log("Rearrange playlist success:", data.message);
+                        fetchSongs();
+                    })
+                    .catch(error => {
+                        console.error("Error rearranging playlist:", error);
+                        alert("Failed to rearrange playlist: " + error.message);
+                        showPlaylistSongs(selectedPlaylist); // Revert UI on failure
+                    });
+                } else if (container.id === 'queue-container') {
+                    songQueue = newOrder.map(item => 
+                        allSongs.find(s => s.id === parseInt(item.id))
+                    ).filter(song => song !== undefined);
+                    currentSongIndex = songQueue.findIndex(s => s.id === songQueue[currentSongIndex]?.id);
+                    if (currentSongIndex === -1 && songQueue.length > 0) currentSongIndex = 0;
+                    originalQueue = [...songQueue];
+                    console.log("Reordered queue:", songQueue, "New index:", currentSongIndex);
+                    showQueueView();
+                }
+            }
+        });
     });
 }
 
 function fetchSongs() {
     console.log("fetchSongs called");
-    fetch('/songs')
+    fetch('/songs', { credentials: 'include' }) // Ensure cookies are sent for session
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -952,12 +958,16 @@ function fetchSongs() {
             if (container) {
                 container.innerHTML = `<p>Error loading songs: ${error.message}</p>`;
             }
+            // Redirect to login if unauthorized (e.g., 401)
+            if (error.message.includes('401')) {
+                window.location.href = '/login';
+            }
         });
 }
 
 function fetchPlaylists() {
     console.log("fetchPlaylists called");
-    fetch('/playlists')
+    fetch('/playlists', { credentials: 'include' }) // Ensure cookies are sent for session
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -977,6 +987,10 @@ function fetchPlaylists() {
             const container = document.getElementById('playlists-container');
             if (container) {
                 container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
+            }
+            // Redirect to login if unauthorized (e.g., 401)
+            if (error.message.includes('401')) {
+                window.location.href = '/login';
             }
         });
 }
@@ -1043,8 +1057,8 @@ function showMainView() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || 'Select a song to play'}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || 'Artist'}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -1305,25 +1319,64 @@ function updateSongOrder(containerId) {
     }
 }
 
+// Handle login form submission
+document.addEventListener('submit', (event) => {
+    if (event.target.id === 'login-form') {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        fetch('/login', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include' // Ensure cookies are sent
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url; // Follow redirect to /index
+            } else if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(text || 'Login failed');
+                });
+            }
+            return response.text(); // Handle non-redirect success (if any)
+        })
+        .then(() => {
+            console.log("Login successful, redirecting to /index");
+        })
+        .catch(error => {
+            console.error('Login error:', error);
+            alert(error.message || 'Login failed');
+            // Optionally re-render login page or show error
+            const contentArea = document.getElementById('content-area');
+            if (contentArea) contentArea.innerHTML = `<p>${error.message}</p>`;
+        });
+    } else if (event.target.id === 'create-playlist-form') {
+        handleCreatePlaylist(event);
+    } else if (event.target.id === 'add-song-form') {
+        handleAddSong(event);
+    } else if (event.target.id === 'search-songs-form') {
+        handleSearchSongs(event);
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM fully loaded - Initializing app");
 
     initAudioPlayer();
     attachControlPanelListeners();
-    fetchSongs();
-    fetchPlaylists();
 
-    document.getElementById('show-playlists-btn').addEventListener('click', showPlaylistsView);
-    document.getElementById('search-songs-btn').addEventListener('click', showSearchSongsView);
-    document.getElementById('add-song-btn').addEventListener('click', addSong);
-    document.getElementById('create-playlist-btn').addEventListener('click', createPlaylist);
-    document.getElementById('queue-list-btn').addEventListener('click', showQueueView);
+    // Check if on index page after login
+    const path = window.location.pathname;
+    if (path === '/index' || path === '/') {
+        fetchSongs();
+        fetchPlaylists();
+        showMainView(); // Initialize UI after data is fetched
+    }
 
-    document.addEventListener('submit', (event) => {
-        if (event.target.id === 'create-playlist-form') handleCreatePlaylist(event);
-        if (event.target.id === 'add-song-form') handleAddSong(event);
-        if (event.target.id === 'search-songs-form') handleSearchSongs(event);
-    });
+    document.getElementById('show-playlists-btn')?.addEventListener('click', showPlaylistsView);
+    document.getElementById('search-songs-btn')?.addEventListener('click', showSearchSongsView);
+    document.getElementById('add-song-btn')?.addEventListener('click', addSong);
+    document.getElementById('create-playlist-btn')?.addEventListener('click', createPlaylist);
+    document.getElementById('queue-list-btn')?.addEventListener('click', showQueueView);
 });
 
 console.log("Script loaded - End of file");
