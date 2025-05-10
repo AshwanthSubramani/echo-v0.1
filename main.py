@@ -523,4 +523,4 @@ async def upload_lyrics(request: Request, song_id: int = Form(...), lyrics_file:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True, log_level="debug")
+    uvicorn.run(app, host=" 192.168.2.21", port=8000, reload=True, log_level="debug")
