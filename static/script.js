@@ -34,8 +34,13 @@ function initAudioPlayer() {
         if (playerInfo) playerInfo.textContent = 'Error playing song, skipping...';
         playNext();
     });
-    audioPlayer.addEventListener('loadeddata', () => {
-        console.log("Audio loadeddata event, duration:", audioPlayer.duration);
+    audioPlayer.addEventListener('loadedmetadata', () => {
+        console.log("Audio loadedmetadata event, duration:", audioPlayer.duration);
+        // Validate duration to prevent invalid values like 999999.0
+        if (isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity || audioPlayer.duration > 3600) {
+            console.warn("Invalid duration detected:", audioPlayer.duration, "Resetting to 0");
+            audioPlayer.duration = 0; // Fallback to 0 to prevent UI issues
+        }
         audioPlayer.play().catch(e => console.error("Play failed:", e));
         updateProgress();
         updatePlayerUI();
@@ -77,15 +82,19 @@ function updateProgress() {
     const progress = document.getElementById('progress');
     const currentTime = document.getElementById('current-time');
     const duration = document.getElementById('duration');
-    if (progress && currentTime && duration && audioPlayer.duration) {
-        const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
-        progress.value = isNaN(percent) ? 0 : percent;
-        currentTime.textContent = formatTime(audioPlayer.currentTime);
-        duration.textContent = formatTime(audioPlayer.duration);
+    if (progress && currentTime && duration && audioPlayer) {
+        // Validate duration and currentTime
+        const songDuration = !isNaN(audioPlayer.duration) && audioPlayer.duration < 3600 ? audioPlayer.duration : 0;
+        const current = !isNaN(audioPlayer.currentTime) ? audioPlayer.currentTime : 0;
+        const percent = songDuration > 0 ? (current / songDuration) * 100 : 0;
+        progress.value = percent;
+        currentTime.textContent = formatTime(current);
+        duration.textContent = formatTime(songDuration);
     }
 }
 
 function formatTime(seconds) {
+    if (isNaN(seconds) || seconds < 0) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -98,7 +107,7 @@ function seek(event) {
         console.error("Progress element not found!");
         return;
     }
-    if (!audioPlayer || isNaN(audioPlayer.duration) || audioPlayer.duration === 0) {
+    if (!audioPlayer || isNaN(audioPlayer.duration) || audioPlayer.duration <= 0 || audioPlayer.duration > 3600) {
         console.warn("Cannot seek: Audio duration is invalid or audio is not loaded.", {
             duration: audioPlayer.duration,
             readyState: audioPlayer.readyState
@@ -294,7 +303,7 @@ function smartShuffle(songs, currentSong = null) {
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
         const j = randomInt(0, i);
-        [array[i], array[j] = [array[j], array[i]]];
+        [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
 }
@@ -876,10 +885,10 @@ function makeSortable() {
             return;
         }
         new Sortable(container, {
-            animation: 150, // Smooth animation for reordering
-            delay: 500, // Require a 500ms long press to start dragging
-            delayOnTouchOnly: true, // Only apply delay on touch devices
-            touchStartThreshold: 5, // Allow small movements (5px) before starting drag
+            animation: 150,
+            delay: 500,
+            delayOnTouchOnly: true,
+            touchStartThreshold: 5,
             onEnd: (evt) => {
                 const items = Array.from(container.children);
                 const newOrder = items.map((item, index) => ({
@@ -908,7 +917,7 @@ function makeSortable() {
                     .catch(error => {
                         console.error("Error rearranging playlist:", error);
                         alert("Failed to rearrange playlist: " + error.message);
-                        showPlaylistSongs(selectedPlaylist); // Revert UI on failure
+                        showPlaylistSongs(selectedPlaylist);
                     });
                 } else if (container.id === 'queue-container') {
                     songQueue = newOrder.map(item => 
@@ -925,74 +934,66 @@ function makeSortable() {
     });
 }
 
-function fetchSongs() {
+async function fetchSongs() {
     console.log("fetchSongs called");
-    fetch('/songs', { credentials: 'include' }) // Ensure cookies are sent for session
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+    try {
+        const response = await fetch('/songs', { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        console.log("Fetched songs data:", data);
+        if (!Array.isArray(data)) {
+            throw new Error('Expected an array of songs, but received: ' + JSON.stringify(data));
+        }
+        allSongs = data.map(song => {
+            console.log("Processing song:", song);
+            if (song.lyrics && Array.isArray(song.lyrics)) {
+                lyricsData[song.id] = song.lyrics;
+                console.log("Updated lyricsData for song", song.id, ":", song.lyrics.slice(0, 5));
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log("Fetched songs data:", data);
-            if (!Array.isArray(data)) {
-                throw new Error('Expected an array of songs, but received: ' + JSON.stringify(data));
-            }
-            allSongs = data.map(song => {
-                console.log("Processing song:", song);
-                if (song.lyrics && Array.isArray(song.lyrics)) {
-                    lyricsData[song.id] = song.lyrics;
-                    console.log("Updated lyricsData for song", song.id, ":", song.lyrics.slice(0, 5)); // Log first 5 lines
-                }
-                return song;
-            });
-            console.log("Updated allSongs:", allSongs);
-            console.log("Updated lyricsData:", lyricsData);
-            if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
-            else displaySongs();
-        })
-        .catch(error => {
-            console.error("Error fetching songs:", error);
-            const container = document.getElementById('songs-container');
-            if (container) {
-                container.innerHTML = `<p>Error loading songs: ${error.message}</p>`;
-            }
-            // Redirect to login if unauthorized (e.g., 401)
-            if (error.message.includes('401')) {
-                window.location.href = '/login';
-            }
+            return song;
         });
+        console.log("Updated allSongs:", allSongs);
+        console.log("Updated lyricsData:", lyricsData);
+        if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
+        else displaySongs();
+    } catch (error) {
+        console.error("Error fetching songs:", error);
+        const container = document.getElementById('songs-container');
+        if (container) {
+            container.innerHTML = `<p>Error loading songs: ${error.message}</p>`;
+        }
+        if (error.message.includes('401')) {
+            window.location.href = '/login';
+        }
+    }
 }
 
-function fetchPlaylists() {
+async function fetchPlaylists() {
     console.log("fetchPlaylists called");
-    fetch('/playlists', { credentials: 'include' }) // Ensure cookies are sent for session
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (!Array.isArray(data.playlists)) {
-                throw new Error('Expected playlists to be an array');
-            }
-            playlists = data.playlists;
-            console.log("Updated playlists:", playlists);
-            displayPlaylists();
-        })
-        .catch(error => {
-            console.error("Error fetching playlists:", error);
-            const container = document.getElementById('playlists-container');
-            if (container) {
-                container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
-            }
-            // Redirect to login if unauthorized (e.g., 401)
-            if (error.message.includes('401')) {
-                window.location.href = '/login';
-            }
-        });
+    try {
+        const response = await fetch('/playlists', { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (!Array.isArray(data.playlists)) {
+            throw new Error('Expected playlists to be an array');
+        }
+        playlists = data.playlists;
+        console.log("Updated playlists:", playlists);
+        displayPlaylists();
+    } catch (error) {
+        console.error("Error fetching playlists:", error);
+        const container = document.getElementById('playlists-container');
+        if (container) {
+            container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
+        }
+        if (error.message.includes('401')) {
+            window.location.href = '/login';
+        }
+    }
 }
 
 function displayPlaylists() {
@@ -1134,7 +1135,7 @@ function uploadLyrics(songId) {
                 console.log("Lyrics upload response:", data);
                 if (data.success) {
                     alert("Lyrics uploaded successfully!");
-                    lyricsData[songId] = data.lyrics; // Store parsed lyrics
+                    lyricsData[songId] = data.lyrics;
                     if ((songQueue.length > 0 && currentSongIndex >= 0 && songQueue[currentSongIndex].id === songId) || (currentSong && currentSong.id === songId)) {
                         updateLyrics();
                     }
@@ -1319,7 +1320,6 @@ function updateSongOrder(containerId) {
     }
 }
 
-// Handle login form submission
 document.addEventListener('submit', (event) => {
     if (event.target.id === 'login-form') {
         event.preventDefault();
@@ -1327,17 +1327,17 @@ document.addEventListener('submit', (event) => {
         fetch('/login', {
             method: 'POST',
             body: formData,
-            credentials: 'include' // Ensure cookies are sent
+            credentials: 'include'
         })
         .then(response => {
             if (response.redirected) {
-                window.location.href = response.url; // Follow redirect to /index
+                window.location.href = response.url;
             } else if (!response.ok) {
                 return response.text().then(text => {
                     throw new Error(text || 'Login failed');
                 });
             }
-            return response.text(); // Handle non-redirect success (if any)
+            return response.text();
         })
         .then(() => {
             console.log("Login successful, redirecting to /index");
@@ -1345,7 +1345,6 @@ document.addEventListener('submit', (event) => {
         .catch(error => {
             console.error('Login error:', error);
             alert(error.message || 'Login failed');
-            // Optionally re-render login page or show error
             const contentArea = document.getElementById('content-area');
             if (contentArea) contentArea.innerHTML = `<p>${error.message}</p>`;
         });
@@ -1358,18 +1357,16 @@ document.addEventListener('submit', (event) => {
     }
 });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     console.log("DOM fully loaded - Initializing app");
 
     initAudioPlayer();
     attachControlPanelListeners();
 
-    // Check if on index page after login
     const path = window.location.pathname;
     if (path === '/index' || path === '/') {
-        fetchSongs();
-        fetchPlaylists();
-        showMainView(); // Initialize UI after data is fetched
+        await Promise.all([fetchSongs(), fetchPlaylists()]);
+        showMainView();
     }
 
     document.getElementById('show-playlists-btn')?.addEventListener('click', showPlaylistsView);
