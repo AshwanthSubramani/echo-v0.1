@@ -36,10 +36,9 @@ function initAudioPlayer() {
     });
     audioPlayer.addEventListener('loadedmetadata', () => {
         console.log("Audio loadedmetadata event, duration:", audioPlayer.duration);
-        // Validate duration to prevent invalid values like 999999.0
         if (isNaN(audioPlayer.duration) || audioPlayer.duration === Infinity || audioPlayer.duration > 3600) {
             console.warn("Invalid duration detected:", audioPlayer.duration, "Resetting to 0");
-            audioPlayer.duration = 0; // Fallback to 0 to prevent UI issues
+            audioPlayer.duration = 0;
         }
         audioPlayer.play().catch(e => console.error("Play failed:", e));
         updateProgress();
@@ -83,7 +82,6 @@ function updateProgress() {
     const currentTime = document.getElementById('current-time');
     const duration = document.getElementById('duration');
     if (progress && currentTime && duration && audioPlayer) {
-        // Validate duration and currentTime
         const songDuration = !isNaN(audioPlayer.duration) && audioPlayer.duration < 3600 ? audioPlayer.duration : 0;
         const current = !isNaN(audioPlayer.currentTime) ? audioPlayer.currentTime : 0;
         const percent = songDuration > 0 ? (current / songDuration) * 100 : 0;
@@ -108,10 +106,7 @@ function seek(event) {
         return;
     }
     if (!audioPlayer || isNaN(audioPlayer.duration) || audioPlayer.duration <= 0 || audioPlayer.duration > 3600) {
-        console.warn("Cannot seek: Audio duration is invalid or audio is not loaded.", {
-            duration: audioPlayer.duration,
-            readyState: audioPlayer.readyState
-        });
+        console.warn("Cannot seek: Audio duration is invalid or audio is not loaded.");
         return;
     }
     const seekPosition = (event.target.value / 100) * audioPlayer.duration;
@@ -135,7 +130,7 @@ async function playSong(songId) {
     songQueue = playlistSongs;
     originalQueue = [...playlistSongs];
     currentSongIndex = playlistSongs.findIndex(s => s.id === song.id);
-    currentSong = song; // Store the current song
+    currentSong = song;
     if (isShuffling) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
@@ -181,7 +176,7 @@ function playNext() {
     currentSongIndex++;
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
-        currentSong = nextSong; // Store the current song
+        currentSong = nextSong;
         audioPlayer.src = nextSong.url;
         audioPlayer.load();
         updatePlayerUI();
@@ -197,7 +192,7 @@ function playPrevious() {
     currentSongIndex--;
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
-        currentSong = prevSong; // Store the current song
+        currentSong = prevSong;
         audioPlayer.src = prevSong.url;
         audioPlayer.load();
         updatePlayerUI();
@@ -209,7 +204,7 @@ function stopPlayer() {
     console.log("stopPlayer called");
     audioPlayer.pause();
     audioPlayer.src = '';
-    currentSong = null; // Clear the current song
+    currentSong = null;
     const playerInfo = document.getElementById('current-song-title');
     if (playerInfo) playerInfo.textContent = 'Select a song to play';
     songQueue = [];
@@ -356,8 +351,8 @@ function showEditPlaylistPopup(playlistId, playlistName) {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -472,8 +467,8 @@ function showPlaylistSongs(playlistName) {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -523,8 +518,8 @@ function createPlaylist() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -558,15 +553,23 @@ function handleCreatePlaylist(event) {
     const formData = new FormData(event.target);
     fetch('/create_playlist', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include' // Ensure cookies are sent
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to create playlist');
+        return response.json();
+    })
     .then(data => {
         alert(data.message);
         fetchPlaylists();
         showMainView();
     })
-    .catch(error => console.error('Error creating playlist:', error));
+    .catch(error => {
+        console.error('Error creating playlist:', error);
+        alert('Failed to create playlist: ' + error.message);
+        if (error.message.includes('401')) window.location.href = '/login';
+    });
 }
 
 function addSong() {
@@ -579,8 +582,8 @@ function addSong() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -618,15 +621,23 @@ function handleAddSong(event) {
     const formData = new FormData(event.target);
     fetch('/add_song', {
         method: 'POST',
-        body: formData
+        body: formData,
+        credentials: 'include' // Ensure cookies are sent
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to add song');
+        return response.json();
+    })
     .then(data => {
         alert(data.message);
         fetchSongs();
         showMainView();
     })
-    .catch(error => console.error('Error adding song:', error));
+    .catch(error => {
+        console.error('Error adding song:', error);
+        alert('Failed to add song: ' + error.message);
+        if (error.message.includes('401')) window.location.href = '/login';
+    });
 }
 
 function showPlaylistsView() {
@@ -639,8 +650,8 @@ function showPlaylistsView() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -683,8 +694,8 @@ function showSearchSongsView() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -745,8 +756,8 @@ function addSearchedSong(youtubeUrl) {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -789,8 +800,8 @@ function showQueueView() {
                 Your browser does not support the audio element.
             </audio>
             <div class="song-info">
-                <span id="current-song-title">${document.getElementById('current-song-title').textContent}</span> - 
-                <span id="current-song-artist">${document.getElementById('current-song-artist').textContent}</span>
+                <span id="current-song-title">${document.getElementById('current-song-title')?.textContent || ''}</span> - 
+                <span id="current-song-artist">${document.getElementById('current-song-artist')?.textContent || ''}</span>
             </div>
             <div class="player-controls">
                 <button id="previous-btn" title="Previous Song"><i class="fas fa-step-backward"></i></button>
@@ -844,16 +855,24 @@ function deletePlaylist(playlistId) {
     fetch('/delete_playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `playlist_id=${encodeURIComponent(playlistId)}`
+        body: `playlist_id=${encodeURIComponent(playlistId)}`,
+        credentials: 'include' // Ensure cookies are sent
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to delete playlist');
+        return response.json();
+    })
     .then(data => {
         alert(data.message);
         selectedPlaylist = null;
         fetchPlaylists();
         showMainView();
     })
-    .catch(error => console.error("Error deleting playlist:", error));
+    .catch(error => {
+        console.error("Error deleting playlist:", error);
+        alert("Failed to delete playlist: " + error.message);
+        if (error.message.includes('401')) window.location.href = '/login';
+    });
 }
 
 function deleteSong(songId) {
@@ -862,15 +881,23 @@ function deleteSong(songId) {
     fetch('/delete_song', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `song_id=${songId}`
+        body: `song_id=${songId}`,
+        credentials: 'include' // Ensure cookies are sent
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) throw new Error('Failed to delete song');
+        return response.json();
+    })
     .then(data => {
         alert(data.message);
         fetchSongs();
         if (selectedPlaylist) showPlaylistSongs(selectedPlaylist);
     })
-    .catch(error => console.error("Error deleting song:", error));
+    .catch(error => {
+        console.error("Error deleting song:", error);
+        alert("Failed to delete song: " + error.message);
+        if (error.message.includes('401')) window.location.href = '/login';
+    });
 }
 
 function makeSortable() {
@@ -902,7 +929,8 @@ function makeSortable() {
                     fetch('/rearrange_playlist', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+                        body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`,
+                        credentials: 'include' // Ensure cookies are sent
                     })
                     .then(response => {
                         if (!response.ok) {
@@ -939,6 +967,11 @@ async function fetchSongs() {
     try {
         const response = await fetch('/songs', { credentials: 'include' });
         if (!response.ok) {
+            if (response.status === 401) {
+                console.warn("Unauthorized access to /songs, redirecting to login");
+                window.location.href = '/login';
+                return;
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
@@ -964,9 +997,6 @@ async function fetchSongs() {
         if (container) {
             container.innerHTML = `<p>Error loading songs: ${error.message}</p>`;
         }
-        if (error.message.includes('401')) {
-            window.location.href = '/login';
-        }
     }
 }
 
@@ -975,6 +1005,11 @@ async function fetchPlaylists() {
     try {
         const response = await fetch('/playlists', { credentials: 'include' });
         if (!response.ok) {
+            if (response.status === 401) {
+                console.warn("Unauthorized access to /playlists, redirecting to login");
+                window.location.href = '/login';
+                return;
+            }
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
@@ -989,9 +1024,6 @@ async function fetchPlaylists() {
         const container = document.getElementById('playlists-container');
         if (container) {
             container.innerHTML = `<p>Error loading playlists: ${error.message}</p>`;
-        }
-        if (error.message.includes('401')) {
-            window.location.href = '/login';
         }
     }
 }
@@ -1123,7 +1155,8 @@ function uploadLyrics(songId) {
             formData.append('lyrics_file', file);
             fetch('/upload_lyrics', {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include' // Ensure cookies are sent
             })
             .then(response => {
                 if (!response.ok) {
@@ -1147,6 +1180,7 @@ function uploadLyrics(songId) {
             .catch(error => {
                 console.error("Error uploading lyrics:", error);
                 alert("Error uploading lyrics: " + error.message);
+                if (error.message.includes('401')) window.location.href = '/login';
             });
         }
     };
@@ -1183,34 +1217,22 @@ function updateLyrics() {
     const lyricsContent = document.getElementById('lyrics-panel');
     const lyricsText = document.getElementById('lyrics-content');
     if (!lyricsContent || !lyricsText || !audioPlayer) {
-        console.warn("updateLyrics: Missing required elements or state", {
-            lyricsContent: !!lyricsContent,
-            lyricsText: !!lyricsText,
-            audioPlayer: !!audioPlayer
-        });
+        console.warn("updateLyrics: Missing required elements or state");
         return;
     }
     const currentSongId = currentSong ? currentSong.id : (songQueue.length > 0 && currentSongIndex >= 0 ? songQueue[currentSongIndex].id : null);
     console.log("Current song ID:", currentSongId);
     if (!currentSongId) {
-        console.log("No current song to display lyrics for");
         lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
         return;
     }
     const lyrics = lyricsData[currentSongId];
     if (!lyrics || !lyrics.length) {
-        console.log("No lyrics available for song ID:", currentSongId);
         lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
         return;
     }
 
     console.log("Lyrics for song:", lyrics);
-    console.log("Lyrics timestamp range:", {
-        first: lyrics[0].time,
-        last: lyrics[lyrics.length - 1].time,
-        totalLines: lyrics.length
-    });
-
     const currentTime = audioPlayer.currentTime;
     const songDuration = audioPlayer.duration || 0;
     console.log("Song duration:", songDuration, "seconds");
@@ -1228,11 +1250,9 @@ function updateLyrics() {
             break;
         }
     }
-    console.log("Current line index:", currentLineIndex);
 
     if (currentLineIndex === -1 && adjustedTime > lrcDuration) {
         currentLineIndex = lyrics.length - 1;
-        console.log("Past last lyric, setting currentLineIndex to last line:", currentLineIndex);
     }
 
     let html = '';
@@ -1241,10 +1261,7 @@ function updateLyrics() {
     } else {
         html = '<p>No lyrics at this time.</p>';
     }
-    console.log("Setting lyrics content to:", html);
     lyricsText.innerHTML = html;
-
-    console.log("Displaying single line at index:", currentLineIndex);
 }
 
 function handleDragStart(event) {
@@ -1292,7 +1309,8 @@ function updateSongOrder(containerId) {
         fetch('/rearrange_playlist', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`
+            body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`,
+            credentials: 'include' // Ensure cookies are sent
         })
         .then(response => {
             if (!response.ok) {
@@ -1365,8 +1383,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const path = window.location.pathname;
     if (path === '/index' || path === '/') {
-        await Promise.all([fetchSongs(), fetchPlaylists()]);
-        showMainView();
+        try {
+            await Promise.all([fetchSongs(), fetchPlaylists()]);
+            showMainView();
+        } catch (error) {
+            console.error("Initialization error:", error);
+            if (error.message.includes('401')) window.location.href = '/login';
+            const contentArea = document.getElementById('content-area');
+            if (contentArea) contentArea.innerHTML = `<p>Initialization failed: ${error.message}</p>`;
+        }
     }
 
     document.getElementById('show-playlists-btn')?.addEventListener('click', showPlaylistsView);
