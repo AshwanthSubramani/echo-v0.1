@@ -3,11 +3,12 @@
         "password": "9ba61fa7223692771cd0dad7368519e556073f052033daf6f73bc1e183a7bf88",
         "email": "Ashwanthsubbu05@gmail.com",
         "broj": "1234567890"
+    
     },
-    "Lohita": {
-        "password": "99c49becd62bb6b84b1914bb23df1e23927cdbc89ab8af359ccd2c29ff23720d",
-        "email": "Lohita@gmail.com",
+
+    "Java": {
+        "password": "1a474b7500bcf689ead9f28db27898d33fc31fbf82918e5a8670f262feab6a51",
+        "email": "Java@gmail.com",
         "broj": "1234567890"
     }
-    
 }

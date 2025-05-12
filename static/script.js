@@ -135,8 +135,8 @@ async function playSong(songId) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
     }
-    console.log("Setting audio src to:", song.url);
-    audioPlayer.src = song.url;
+    console.log("Setting audio src to /song/" + song.id);
+    audioPlayer.src = `/song/${song.id}`; // Use the endpoint to fetch the song
     try {
         await audioPlayer.load();
         console.log("Audio loaded successfully");
@@ -163,7 +163,7 @@ function addToQueue(songId) {
         originalQueue = [song];
         currentSongIndex = 0;
         currentSong = song;
-        audioPlayer.src = song.url;
+        audioPlayer.src = `/song/${song.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         console.log("No song was playing, starting playback with:", song);
     }
@@ -177,7 +177,7 @@ function playNext() {
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
         currentSong = nextSong;
-        audioPlayer.src = nextSong.url;
+        audioPlayer.src = `/song/${nextSong.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         updatePlayerUI();
         console.log("Next song:", nextSong, "Index:", currentSongIndex);
@@ -193,7 +193,7 @@ function playPrevious() {
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
         currentSong = prevSong;
-        audioPlayer.src = prevSong.url;
+        audioPlayer.src = `/song/${prevSong.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         updatePlayerUI();
         console.log("Previous song:", prevSong, "Index:", currentSongIndex);
@@ -675,7 +675,7 @@ function showPlaylistsView() {
         <div class="playlist-grid" id="all-playlists-container">
             ${playlists.map(playlist => `
                 <div class="playlist-item" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">
-                    <img src="${playlist.image}" alt="${playlist.name}">
+                    <img src="${playlist.image || '/static/images/default.jpg'}" alt="${playlist.name}">
                     <p>${playlist.name}</p>
                 </div>
             `).join('')}
@@ -908,7 +908,11 @@ function makeSortable() {
     ];
     containers.forEach(container => {
         if (!container) {
-            console.warn("Sortable container not found:", container);
+            console.warn(`Sortable container not found for ${container ? container.id : 'null'}`);
+            return;
+        }
+        if (!Sortable) {
+            console.error("Sortable.js library not loaded!");
             return;
         }
         new Sortable(container, {
@@ -930,7 +934,7 @@ function makeSortable() {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`,
-                        credentials: 'include' // Ensure cookies are sent
+                        credentials: 'include'
                     })
                     .then(response => {
                         if (!response.ok) {
@@ -1016,7 +1020,10 @@ async function fetchPlaylists() {
         if (!Array.isArray(data.playlists)) {
             throw new Error('Expected playlists to be an array');
         }
-        playlists = data.playlists;
+        playlists = data.playlists.map(playlist => ({
+            ...playlist,
+            image: playlist.image || '/static/images/default.jpg' // Fallback to default.jpg
+        }));
         console.log("Updated playlists:", playlists);
         displayPlaylists();
     } catch (error) {
@@ -1156,7 +1163,7 @@ function uploadLyrics(songId) {
             fetch('/upload_lyrics', {
                 method: 'POST',
                 body: formData,
-                credentials: 'include' // Ensure cookies are sent
+                credentials: 'include'
             })
             .then(response => {
                 if (!response.ok) {
@@ -1310,7 +1317,7 @@ function updateSongOrder(containerId) {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: `playlist_name=${encodeURIComponent(selectedPlaylist)}&song_ids=${songIds.join(',')}`,
-            credentials: 'include' // Ensure cookies are sent
+            credentials: 'include'
         })
         .then(response => {
             if (!response.ok) {

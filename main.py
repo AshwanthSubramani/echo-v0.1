@@ -95,7 +95,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
         user_id TEXT NOT NULL,
-        image_path TEXT DEFAULT '/static/images/default-playlist.jpg',
+        image_path TEXT DEFAULT '/static/images/default.jpg',
         FOREIGN KEY (user_id) REFERENCES users(username)
     )''')
     
@@ -144,7 +144,7 @@ def migrate_db():
     # If image_path column doesn't exist, add it
     if 'image_path' not in columns:
         try:
-            c.execute("ALTER TABLE playlists ADD COLUMN image_path TEXT DEFAULT '/static/images/default-playlist.jpg'")
+            c.execute("ALTER TABLE playlists ADD COLUMN image_path TEXT DEFAULT '/static/images/default.jpg'")
             logger.debug("Added 'image_path' column to playlists table")
         except sqlite3.OperationalError as e:
             logger.warning(f"Failed to add 'image_path' column: {e}")
@@ -171,6 +171,10 @@ def index_songs(username="Ash"):
     # Ensure the user exists in the users table
     c.execute("INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)", (username, hash_password("default_password")))
     
+    # Create user-specific directory
+    user_dir = MUSIC_DIR / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    
     # Seed playlists
     playlists = ["Chill Hits", "Rock Classics", "Pop Party"]
     for playlist_name in playlists:
@@ -179,8 +183,9 @@ def index_songs(username="Ash"):
             c.execute("INSERT INTO playlists (name, user_id, image_path) VALUES (?, ?, ?)", 
                       (playlist_name, username, f"/static/images/{DEFAULT_IMAGE}"))
             logger.debug(f"Added playlist {playlist_name} for user {username} to database")
+            (user_dir / playlist_name).mkdir(parents=True, exist_ok=True)
 
-    # Seed songs (using YouTube URLs instead of local files for consistency with frontend)
+    # Seed songs (using YouTube URLs)
     songs_data = [
         ("Chill Hits", username, "Song 1", "Artist 1", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", 1),
         ("Rock Classics", username, "Song 2", "Artist 2", "https://www.youtube.com/watch?v=3tmd-ClpJxA", 1),
@@ -190,9 +195,30 @@ def index_songs(username="Ash"):
     for playlist, user_id, title, artist, url, position in songs_data:
         c.execute("SELECT COUNT(*) FROM songs WHERE url = ? AND user_id = ?", (url, user_id))
         if c.fetchone()[0] == 0:
-            c.execute("INSERT INTO songs (playlist, user_id, title, artist, url, position) VALUES (?, ?, ?, ?, ?, ?)",
-                      (playlist, user_id, title, artist, url, position))
-            logger.debug(f"Indexed song: {title} in playlist {playlist} for user {user_id}")
+            playlist_dir = user_dir / playlist
+            playlist_dir.mkdir(parents=True, exist_ok=True)
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': str(playlist_dir / '%(title)s.%(ext)s'),
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'quiet': True,
+            }
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    downloaded_file = Path(ydl.prepare_filename(info)).with_suffix('.mp3')
+                    filename = f"{user_id}/{playlist}/{downloaded_file.name}"
+                    os.rename(downloaded_file, playlist_dir / downloaded_file.name)
+                    c.execute("INSERT INTO songs (playlist, user_id, title, artist, url, filename, position) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                              (playlist, user_id, title, artist, url, filename, position))
+                    logger.debug(f"Indexed song: {title} in playlist {playlist} for user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to download initial song {title}: {e}")
+                continue
 
     conn.commit()
     conn.close()
@@ -354,7 +380,12 @@ async def signup(username: str = Form(...), password: str = Form(...), email: st
     hashed_password = hash_password(password)
     users[username] = {"password": hashed_password, "email": email, "broj": broj}
     save_users()
-    logger.debug(f"Signup successful for username: {username}, redirecting to /login")
+    
+    # Create user-specific directory on signup
+    user_dir = MUSIC_DIR / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    
+    logger.debug(f"Created user directory: {user_dir} for user {username}")
     response = RedirectResponse(url="/login", status_code=303)
     response.set_cookie(key="session_username", value=username, httponly=True, max_age=3600, samesite="Lax")
     return response
@@ -368,7 +399,9 @@ async def create_playlist(request: Request, playlist_name: str = Form(...)):
     if not playlist_name.strip():
         logger.warning("Attempted to create playlist with empty name")
         return JSONResponse(status_code=400, content={"message": "Playlist name cannot be empty"})
-    playlist_dir = MUSIC_DIR / username / playlist_name
+    user_dir = MUSIC_DIR / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    playlist_dir = user_dir / playlist_name
     playlist_dir.mkdir(parents=True, exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
@@ -445,13 +478,14 @@ async def rename_playlist(request: Request, playlist_id: int = Form(...), new_na
         conn.close()
         logger.warning(f"Playlist name {new_name} already exists for user {username}")
         return JSONResponse(status_code=400, content={"message": f"Playlist name {new_name} already exists"})
-    playlist_dir = MUSIC_DIR / username / old_name
-    new_playlist_dir = MUSIC_DIR / username / new_name
+    user_dir = MUSIC_DIR / username
+    old_playlist_dir = user_dir / old_name
+    new_playlist_dir = user_dir / new_name
     c.execute("UPDATE playlists SET name = ? WHERE id = ? AND user_id = ?", (new_name, playlist_id, username))
     c.execute("UPDATE songs SET playlist = ? WHERE playlist = ? AND user_id = ?", (new_name, old_name, username))
-    if playlist_dir.exists():
+    if old_playlist_dir.exists():
         if new_playlist_dir.exists():
-            for song_file in playlist_dir.glob("*.mp3"):
+            for song_file in old_playlist_dir.glob("*.mp3"):
                 target_path = new_playlist_dir / song_file.name
                 if not target_path.exists():
                     try:
@@ -463,16 +497,16 @@ async def rename_playlist(request: Request, playlist_id: int = Form(...), new_na
                 c.execute("UPDATE songs SET filename = ? WHERE filename = ?", 
                          (relative_filename, f"{username}/{old_name}/{song_file.name}"))
             try:
-                playlist_dir.rmdir()
-                logger.debug(f"Removed old playlist directory: {playlist_dir}")
+                old_playlist_dir.rmdir()
+                logger.debug(f"Removed old playlist directory: {old_playlist_dir}")
             except OSError as e:
-                logger.warning(f"Failed to remove old playlist directory {playlist_dir}: {e}")
+                logger.warning(f"Failed to remove old playlist directory {old_playlist_dir}: {e}")
         else:
             try:
-                playlist_dir.rename(new_playlist_dir)
-                logger.debug(f"Renamed playlist directory from {playlist_dir} to {new_playlist_dir}")
+                old_playlist_dir.rename(new_playlist_dir)
+                logger.debug(f"Renamed playlist directory from {old_playlist_dir} to {new_playlist_dir}")
             except OSError as e:
-                logger.warning(f"Failed to rename playlist directory {playlist_dir}: {e}")
+                logger.warning(f"Failed to rename playlist directory {old_playlist_dir}: {e}")
     conn.commit()
     conn.close()
     logger.debug(f"Renamed playlist from {old_name} to {new_name} for user {username}")
@@ -484,7 +518,9 @@ async def add_song(request: Request, playlist_name: str = Form(...), youtube_url
     if not username or username not in users:
         logger.warning("Unauthorized song addition attempt")
         raise HTTPException(status_code=401, detail="Unauthorized")
-    playlist_dir = MUSIC_DIR / username / playlist_name
+    user_dir = MUSIC_DIR / username
+    user_dir.mkdir(parents=True, exist_ok=True)
+    playlist_dir = user_dir / playlist_name
     playlist_dir.mkdir(parents=True, exist_ok=True)
 
     ydl_opts = {
@@ -502,9 +538,7 @@ async def add_song(request: Request, playlist_name: str = Form(...), youtube_url
             info = ydl.extract_info(youtube_url, download=True)
             downloaded_file = Path(ydl.prepare_filename(info)).with_suffix('.mp3')
             filename = f"{username}/{playlist_name}/{downloaded_file.name}"
-            title = info.get('title', 'Unknown Title')
-            artist = info.get('uploader', 'Unknown Artist').replace(" - Topic", "")
-            os.rename(downloaded_file, playlist_dir / downloaded_file.name)  # Ensure file is in correct directory
+            os.rename(downloaded_file, playlist_dir / downloaded_file.name)  # Ensure file is in user-specific directory
     except Exception as e:
         logger.error(f"Failed to download song: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to download song: {str(e)}")
@@ -513,6 +547,8 @@ async def add_song(request: Request, playlist_name: str = Form(...), youtube_url
     c = conn.cursor()
     c.execute("SELECT MAX(position) FROM songs WHERE playlist = ? AND user_id = ?", (playlist_name, username))
     max_position = c.fetchone()[0] or -1
+    title = info.get('title', 'Unknown Title')
+    artist = info.get('uploader', 'Unknown Artist').replace(" - Topic", "")
     c.execute("INSERT INTO songs (title, artist, url, filename, playlist, position, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
               (title, artist, youtube_url, filename, playlist_name, max_position + 1, username))
     conn.commit()
