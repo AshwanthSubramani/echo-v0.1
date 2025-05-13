@@ -3,7 +3,7 @@ console.log("Script loaded - Starting execution");
 let audioPlayer;
 let songQueue = [];
 let currentSongIndex = -1;
-let currentSong = null;
+let currentSong = null; // Store the currently playing song independently
 let allSongs = [];
 let playlists = [];
 let selectedPlaylist = null;
@@ -29,19 +29,10 @@ function initAudioPlayer() {
         updateHistory();
     });
     audioPlayer.addEventListener('error', (e) => {
-        console.error("Audio playback error:", e, "Source:", audioPlayer.src);
+        console.error("Audio playback error:", e);
         const playerInfo = document.getElementById('current-song-title');
-        if (playerInfo) {
-            playerInfo.textContent = songQueue.length === 0
-                ? 'No songs in queue. Add a song to play.'
-                : 'Error playing song (file may be missing). Skipping...';
-        }
-        // Only proceed if there’s a next valid song
-        if (songQueue.length > 0 && currentSongIndex + 1 < songQueue.length) {
-            playNext();
-        } else {
-            stopPlayer(); // Stop if no valid next song
-        }
+        if (playerInfo) playerInfo.textContent = 'Error playing song, skipping...';
+        playNext();
     });
     audioPlayer.addEventListener('loadedmetadata', () => {
         console.log("Audio loadedmetadata event, duration:", audioPlayer.duration);
@@ -131,7 +122,6 @@ async function playSong(songId) {
     if (!song) {
         console.log("Song not found for songId:", songId);
         alert("Song not found!");
-        stopPlayer();
         return;
     }
     console.log("Found song:", song);
@@ -145,8 +135,8 @@ async function playSong(songId) {
         songQueue = smartShuffle(playlistSongs, song);
         currentSongIndex = songQueue.findIndex(s => s.id === song.id);
     }
-    console.log("Setting audio src to:", `/song/${songId}`);
-    audioPlayer.src = `/song/${songId}`;
+    console.log("Setting audio src to /song/" + song.id);
+    audioPlayer.src = `/song/${song.id}`; // Use the endpoint to fetch the song
     try {
         await audioPlayer.load();
         console.log("Audio loaded successfully");
@@ -154,10 +144,8 @@ async function playSong(songId) {
     } catch (e) {
         console.error("Failed to load or play audio:", e);
         alert("Failed to play song: " + e.message);
-        stopPlayer();
     }
     updatePlayerUI();
-    renderQueue();
     console.log("Playing song:", song, "Queue:", songQueue, "Index:", currentSongIndex);
 }
 
@@ -175,12 +163,11 @@ function addToQueue(songId) {
         originalQueue = [song];
         currentSongIndex = 0;
         currentSong = song;
-        audioPlayer.src = `/song/${songId}`;
+        audioPlayer.src = `/song/${song.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         console.log("No song was playing, starting playback with:", song);
     }
     updatePlayerUI();
-    renderQueue();
     console.log("Queue after adding:", songQueue);
 }
 
@@ -190,10 +177,9 @@ function playNext() {
     if (currentSongIndex < songQueue.length) {
         const nextSong = songQueue[currentSongIndex];
         currentSong = nextSong;
-        audioPlayer.src = `/song/${nextSong.id}`;
+        audioPlayer.src = `/song/${nextSong.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         updatePlayerUI();
-        renderQueue();
         console.log("Next song:", nextSong, "Index:", currentSongIndex);
     } else {
         stopPlayer();
@@ -207,10 +193,9 @@ function playPrevious() {
     if (currentSongIndex >= 0) {
         const prevSong = songQueue[currentSongIndex];
         currentSong = prevSong;
-        audioPlayer.src = `/song/${prevSong.id}`;
+        audioPlayer.src = `/song/${prevSong.id}`; // Use the endpoint to fetch the song
         audioPlayer.load();
         updatePlayerUI();
-        renderQueue();
         console.log("Previous song:", prevSong, "Index:", currentSongIndex);
     }
 }
@@ -228,7 +213,6 @@ function stopPlayer() {
     updatePlayerUI();
     updateProgress();
     updateLyrics();
-    renderQueue();
     console.log("Player stopped");
 }
 
@@ -238,7 +222,6 @@ function clearQueue() {
     originalQueue = [];
     currentSongIndex = -1;
     updatePlayerUI();
-    renderQueue();
     showQueueView();
 }
 
@@ -257,17 +240,20 @@ function toggleShuffle() {
     const shuffleBtn = document.getElementById('shuffle-btn');
     if (shuffleBtn) shuffleBtn.classList.toggle('active', isShuffling);
     
-    if (isShuffling && songQueue.length > 0) {
-        const currentSong = songQueue[currentSongIndex];
-        songQueue = smartShuffle(originalQueue, currentSong);
-        currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
-    } else if (!isShuffling && songQueue.length > 0) {
-        const currentSong = songQueue[currentSongIndex];
-        songQueue = [...originalQueue];
-        currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
+    if (isShuffling) {
+        if (songQueue.length > 0) {
+            const currentSong = songQueue[currentSongIndex];
+            songQueue = smartShuffle(originalQueue, currentSong);
+            currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
+        }
+    } else {
+        if (songQueue.length > 0) {
+            const currentSong = songQueue[currentSongIndex];
+            songQueue = [...originalQueue];
+            currentSongIndex = songQueue.findIndex(s => s.id === currentSong.id);
+        }
     }
     updatePlayerUI();
-    renderQueue();
     console.log("Shuffle toggled:", isShuffling, "Queue:", songQueue);
 }
 
@@ -277,6 +263,7 @@ function randomInt(min, max) {
 
 function smartShuffle(songs, currentSong = null) {
     console.log("smartShuffle called with songs:", songs, "currentSong:", currentSong);
+    
     if (songs.length === 0) return [];
 
     let remainingSongs = songs.filter(song => song !== currentSong);
@@ -443,8 +430,7 @@ function renamePlaylist(playlistId, currentName) {
     fetch('/rename_playlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `playlist_id=${encodeURIComponent(playlistId)}&new_name=${encodeURIComponent(newName)}`,
-        credentials: 'include'
+        body: `playlist_id=${encodeURIComponent(playlistId)}&new_name=${encodeURIComponent(newName)}`
     })
     .then(response => {
         if (!response.ok) {
@@ -568,7 +554,7 @@ function handleCreatePlaylist(event) {
     fetch('/create_playlist', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include' // Ensure cookies are sent
     })
     .then(response => {
         if (!response.ok) throw new Error('Failed to create playlist');
@@ -636,7 +622,7 @@ function handleAddSong(event) {
     fetch('/add_song', {
         method: 'POST',
         body: formData,
-        credentials: 'include'
+        credentials: 'include' // Ensure cookies are sent
     })
     .then(response => {
         if (!response.ok) throw new Error('Failed to add song');
@@ -689,7 +675,7 @@ function showPlaylistsView() {
         <div class="playlist-grid" id="all-playlists-container">
             ${playlists.map(playlist => `
                 <div class="playlist-item" onclick="showPlaylistSongs('${playlist.name.replace(/'/g, "\\'")}')">
-                    <img src="${playlist.image}" alt="${playlist.name}">
+                    <img src="${playlist.image || '/static/images/default.jpg'}" alt="${playlist.name}">
                     <p>${playlist.name}</p>
                 </div>
             `).join('')}
@@ -870,7 +856,7 @@ function deletePlaylist(playlistId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `playlist_id=${encodeURIComponent(playlistId)}`,
-        credentials: 'include'
+        credentials: 'include' // Ensure cookies are sent
     })
     .then(response => {
         if (!response.ok) throw new Error('Failed to delete playlist');
@@ -896,7 +882,7 @@ function deleteSong(songId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `song_id=${songId}`,
-        credentials: 'include'
+        credentials: 'include' // Ensure cookies are sent
     })
     .then(response => {
         if (!response.ok) throw new Error('Failed to delete song');
@@ -922,7 +908,11 @@ function makeSortable() {
     ];
     containers.forEach(container => {
         if (!container) {
-            console.warn("Sortable container not found:", container);
+            console.warn(`Sortable container not found for ${container ? container.id : 'null'}`);
+            return;
+        }
+        if (!Sortable) {
+            console.error("Sortable.js library not loaded!");
             return;
         }
         new Sortable(container, {
@@ -1030,7 +1020,10 @@ async function fetchPlaylists() {
         if (!Array.isArray(data.playlists)) {
             throw new Error('Expected playlists to be an array');
         }
-        playlists = data.playlists;
+        playlists = data.playlists.map(playlist => ({
+            ...playlist,
+            image: playlist.image || '/static/images/default.jpg' // Fallback to default.jpg
+        }));
         console.log("Updated playlists:", playlists);
         displayPlaylists();
     } catch (error) {
@@ -1156,19 +1149,6 @@ function updatePlayerUI() {
     }
 }
 
-function renderQueue() {
-    const container = document.getElementById('queue-container');
-    if (container) {
-        container.innerHTML = songQueue.length === 0 ? '<p>No songs in queue.</p>' : songQueue.map((song, index) => `
-            <div class="queue-item" draggable="true" data-id="${song.id}" data-index="${index}">
-                <i class="far fa-waveform"></i>
-                <span onclick="playSong(${song.id})" style="cursor: pointer;">${song.title} - ${song.artist}</span>
-                <button onclick="removeFromQueue(${index})"><i class="fas fa-trash"></i></button>
-            </div>
-        `).join('');
-    }
-}
-
 function uploadLyrics(songId) {
     console.log("uploadLyrics called with songId:", songId);
     const input = document.createElement('input');
@@ -1241,21 +1221,21 @@ function parseLrc(lyricsText) {
 
 function updateLyrics() {
     console.log("updateLyrics called");
-    const lyricsPanel = document.getElementById('lyrics-panel');
-    const lyricsContent = document.getElementById('lyrics-content');
-    if (!lyricsPanel || !lyricsContent || !audioPlayer) {
+    const lyricsContent = document.getElementById('lyrics-panel');
+    const lyricsText = document.getElementById('lyrics-content');
+    if (!lyricsContent || !lyricsText || !audioPlayer) {
         console.warn("updateLyrics: Missing required elements or state");
         return;
     }
     const currentSongId = currentSong ? currentSong.id : (songQueue.length > 0 && currentSongIndex >= 0 ? songQueue[currentSongIndex].id : null);
     console.log("Current song ID:", currentSongId);
     if (!currentSongId) {
-        lyricsContent.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
+        lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
         return;
     }
     const lyrics = lyricsData[currentSongId];
     if (!lyrics || !lyrics.length) {
-        lyricsContent.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
+        lyricsText.innerHTML = '<p>No lyrics available. Upload a lyrics file to see synced lyrics.</p>';
         return;
     }
 
@@ -1288,7 +1268,7 @@ function updateLyrics() {
     } else {
         html = '<p>No lyrics at this time.</p>';
     }
-    lyricsContent.innerHTML = html;
+    lyricsText.innerHTML = html;
 }
 
 function handleDragStart(event) {
