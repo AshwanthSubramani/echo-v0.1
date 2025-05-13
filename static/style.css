@@ -28,7 +28,7 @@ body {
     border: 2vw solid #080808;
     outline: 1px solid #111;
     overflow: hidden;
-    transition: all ease-in-out 1s;
+    transition: all ease-in-out 0.8s;
     display: flex;
     flex-direction: column;
 }
@@ -40,7 +40,7 @@ body {
     text-transform: lowercase;
     text-align: center;
     width: 100%;
-    height: 100%;
+    height: 10%; /* Fixed height for header */
     margin: auto;
     position: relative;
     justify-content: center;
@@ -50,36 +50,34 @@ body {
 
 .nmox1 {
     font-family: 'Chill', sans-serif;
-    font-size: 17vw; /* Slightly reduced from 18vw */
+    font-size: 17vw;
     position: relative;
     left: -5vw;
-    transition: all ease-in-out 0.9s;
-    transition-delay: 0.8s;
+    transition: all ease-in-out 0.6s; /* Reduced transition time */
 }
 
 .nmox2 {
     font-family: 'Chill', sans-serif;
-    font-size: 17vw; /* Slightly reduced from 18vw */
+    font-size: 17vw;
     position: relative;
     right: -3vw;
-    transition: all ease-in-out 0.8s;
-    transition-delay: 0.8s;
+    transition: all ease-in-out 0.6s; /* Reduced transition time */
 }
 
 .moxybaul:hover .nmox1 {
     left: -40vw;
-    transition: all ease-in-out 0.8s;
+    transition: all ease-in-out 0.6s;
 }
 
 .moxybaul:hover .nmox2 {
     right: -40vw;
-    transition: all ease-in-out 0.8s;
+    transition: all ease-in-out 0.6s;
 }
 
 /* Content Area */
 .box-dmox {
     width: 100%;
-    height: 100%;
+    height: 80%; /* Adjusted to leave space for footer */
     position: relative;
     top: -100%;
     display: flex;
@@ -87,13 +85,13 @@ body {
     justify-content: center;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
-    font-size: 1.1rem; /* Slightly reduced from 1.2rem */
+    font-size: 1.1rem;
     letter-spacing: 1px;
 }
 
 .musicmox {
     width: 85%;
-    height: 85%;
+    height: 100%;
     min-height: 0;
     background: rgba(0, 0, 0, 0.6);
     margin: 0 auto;
@@ -102,7 +100,7 @@ body {
     flex-direction: column;
     position: relative;
     bottom: -90%;
-    transition: all ease-in-out 0.8s;
+    transition: all ease-in-out 0.6s; /* Reduced transition time */
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
@@ -111,8 +109,7 @@ body {
 
 .moxybaul:hover .musicmox {
     bottom: 0;
-    transition: all ease-in-out 0.8s;
-    transition-delay: 0.8s;
+    transition: all ease-in-out 0.6s;
 }
 
 #content-area {
@@ -198,13 +195,14 @@ body {
     border-radius: 6px;
     width: 100%;
     text-align: center;
-    overflow: hidden;
-    height: 3rem;
+    overflow-y: auto; /* Added for scrollable lyrics */
+    max-height: 6rem; /* Adjustable max height */
     flex-shrink: 0;
 }
 
 #lyrics-content {
-    white-space: nowrap;
+    white-space: pre-wrap; /* Allow text wrapping */
+    overflow-y: auto;
 }
 
 #lyrics-content p {
@@ -227,7 +225,7 @@ body {
 .songs h2,
 .queue h2 {
     color: #5c4763;
-    font-size: 1rem; /* Slightly reduced from 1.1rem */
+    font-size: 1rem;
     width: 100%;
     border-bottom: 1px solid #5c4763;
     padding-bottom: 0.4rem;
@@ -266,7 +264,7 @@ body {
 .playlist-item p {
     color: #ccc;
     margin: 0.4rem 0 0;
-    font-size: 0.65rem; /* Slightly reduced from 0.7rem */
+    font-size: 0.65rem;
 }
 
 .song-list,
@@ -280,9 +278,9 @@ body {
     display: flex;
     align-items: center;
     background: rgba(0, 0, 0, 0.4);
-    padding: 0.25rem; /* Slightly reduced from 0.3rem */
-    line-height: 0.6rem; /* Slightly reduced from 0.7rem */
-    margin-bottom: 0.3rem; /* Slightly reduced from 0.4rem */
+    padding: 0.25rem;
+    line-height: 0.6rem;
+    margin-bottom: 0.3rem;
     cursor: pointer;
     transition: all ease-in-out 0.3s;
     border-radius: 6px;
@@ -304,15 +302,15 @@ body {
 
 .song-item i,
 .queue-item i {
-    font-size: 1.4rem; /* Slightly reduced from 1.5rem */
+    font-size: 1.4rem;
     color: #ccc;
-    padding: 0.6rem; /* Slightly reduced from 0.7rem */
+    padding: 0.6rem;
 }
 
 .song-item span,
 .queue-item span {
-    width: 4.5rem; /* Slightly reduced from 5rem */
-    font-size: 0.75rem; /* Slightly reduced from 0.8rem */
+    width: 4.5rem;
+    font-size: 0.75rem;
     font-weight: 700;
     color: #5c4763;
     border: 0;
@@ -326,20 +324,28 @@ body {
     transition: all ease-in-out 0.3s;
 }
 
-.song-item m,
-.queue-item m {
-    font-size: 0.75rem; /* Slightly reduced from 0.8rem */
-    color: #999;
-    margin-left: 0.3rem; /* Slightly reduced from 0.4rem */
-    display: flex;
+.song-item button,
+.queue-item button {
+    background: none;
+    border: none;
+    color: #ccc;
+    font-size: 0.75rem;
+    cursor: pointer;
+    margin-left: 0.3rem;
+    transition: all ease-in-out 0.3s;
 }
 
-.song-item m:before,
-.queue-item m:before {
-    content: '/';
-    font-weight: 700;
+.song-item button:hover,
+.queue-item button:hover {
     color: #5c4763;
-    margin-right: 0.6rem; /* Slightly reduced from 0.7rem */
+}
+
+.delete-btn {
+    color: #ff4444; /* Red for delete action */
+}
+
+.delete-btn:hover {
+    color: #cc0000;
 }
 
 /* Buttons */
@@ -348,43 +354,48 @@ body {
     margin: auto;
     display: flex;
     align-items: center;
-    margin-top: 1.1rem; /* Slightly reduced from 1.2rem */
+    margin-top: 1.1rem;
     justify-content: center;
-    gap: 1.1rem; /* Slightly reduced from 1.2rem */
+    gap: 1.1rem;
 }
 
 .botonmox a {
     color: #5c4763;
-    font-size: 1.4rem; /* Slightly reduced from 1.5rem */
+    font-size: 1.4rem;
     -webkit-text-stroke: 1px transparent;
     transition: all ease-in-out 0.4s;
+    text-decoration: none;
 }
 
-.botonmox a:hover {
+.botonmox a:hover,
+.botonmox a:focus {
     -webkit-text-stroke: 1px #5c4763;
     color: transparent;
-    transition: all ease-in-out 0.4s;
+    outline: none;
+}
+
+.botonmox a:focus {
+    outline: 2px solid #5c4763;
 }
 
 /* Footer */
 .bottomlyrm {
     font-family: 'Rajdhani', sans-serif;
-    font-size: 0.65rem; /* Slightly reduced from 0.7rem */
+    font-size: 0.65rem;
     text-transform: uppercase;
-    letter-spacing: 0.35rem; /* Slightly reduced from 0.4rem */
+    letter-spacing: 0.35rem;
     color: #ccc;
     position: relative;
     top: -47.5rem;
     text-align: center;
-    line-height: 0.65rem; /* Slightly reduced from 0.7rem */
-    transition: all ease-in-out 0.8s;
-    transition-delay: 1s;
+    line-height: 0.65rem;
+    transition: all ease-in-out 0.6s; /* Reduced transition time */
 }
 
 .moxybaul:hover .bottomlyrm {
     filter: blur(10px);
     opacity: 0;
-    transition: all ease-in-out 0.8s;
+    transition: all ease-in-out 0.6s;
 }
 
 /* Additional Elements */
@@ -392,13 +403,19 @@ body {
     background: none;
     border: none;
     color: #5c4763;
-    font-size: 1.1rem; /* Slightly reduced from 1.2rem */
+    font-size: 1.1rem;
     cursor: pointer;
-    margin-bottom: 0.6rem; /* Slightly reduced from 0.7rem */
+    margin-bottom: 0.6rem;
 }
 
-.back-btn:hover {
+.back-btn:hover,
+.back-btn:focus {
     color: #ccc;
+    outline: none;
+}
+
+.back-btn:focus {
+    outline: 2px solid #5c4763;
 }
 
 .create-playlist-form,
@@ -406,9 +423,9 @@ body {
 .add-song-form {
     display: flex;
     flex-direction: column;
-    gap: 0.6rem; /* Slightly reduced from 0.7rem */
+    gap: 0.6rem;
     width: 100%;
-    margin-bottom: 1.2rem; /* Slightly reduced from 1.5rem */
+    margin-bottom: 1.2rem;
 }
 
 .create-playlist-form input,
@@ -417,7 +434,7 @@ body {
 .add-song-form select {
     background: rgba(0, 0, 0, 0.4);
     border: 1px solid #5c4763;
-    padding: 0.6rem; /* Slightly reduced from 0.7rem */
+    padding: 0.6rem;
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
@@ -430,7 +447,7 @@ body {
 .clear-queue-btn {
     background: #5c4763;
     border: none;
-    padding: 0.6rem; /* Slightly reduced from 0.7rem */
+    padding: 0.6rem;
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
@@ -449,8 +466,8 @@ body {
 
 .search-result {
     background: rgba(0, 0, 0, 0.4);
-    padding: 0.6rem; /* Slightly reduced from 0.7rem */
-    margin-bottom: 0.3rem; /* Slightly reduced from 0.4rem */
+    padding: 0.6rem;
+    margin-bottom: 0.3rem;
     cursor: pointer;
     color: #ccc;
     display: flex;
@@ -464,15 +481,15 @@ body {
 }
 
 .edit-playlist-actions {
-    margin-top: 0.6rem; /* Slightly reduced from 0.7rem */
+    margin-top: 0.6rem;
     display: flex;
-    gap: 0.6rem; /* Slightly reduced from 0.7rem */
+    gap: 0.6rem;
 }
 
 .edit-playlist-actions button {
     background: #5c4763;
     border: none;
-    padding: 0.5rem; /* Slightly reduced from 0.6rem */
+    padding: 0.5rem;
     color: #ccc;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
@@ -490,10 +507,10 @@ body {
     background-color: #5c4763;
     color: #ccc;
     border: none;
-    padding: 0.35rem 0.6rem; /* Slightly reduced from 0.4rem 0.7rem */
+    padding: 0.35rem 0.6rem;
     border-radius: 4px;
     cursor: pointer;
-    margin-left: 0.3rem; /* Slightly reduced from 0.4rem */
+    margin-left: 0.3rem;
     font-family: 'Rajdhani', sans-serif;
     text-transform: uppercase;
     transition: all ease-in-out 0.3s;
@@ -509,7 +526,7 @@ body {
     font-family: 'Chill';
     font-style: normal;
     font-weight: normal;
-    src: url('https://dl.dropbox.com/s/agpnu5irqlaaeco/Chillvornia%20Stamp%20Slant.otf') format('woff');
+    src: url('/static/Chillvornia Stamp Slant.otf') format('woff'); /* Local path assumption */
 }
 
 /* Responsive Design */
@@ -519,8 +536,11 @@ body {
         height: 92vh;
         border: 1vw solid #080808;
     }
+    .nameboxm {
+        height: 8%; /* Adjusted for smaller screens */
+    }
     .nmox1, .nmox2 {
-        font-size: 11vw; /* Slightly reduced from 12vw */
+        font-size: 11vw;
     }
     .moxybaul:hover .nmox1 {
         left: -50vw;
@@ -531,7 +551,7 @@ body {
     .musicmox {
         width: 90%;
         height: 80%;
-        padding: 1.1rem; /* Slightly reduced from 1.2rem */
+        padding: 1.1rem;
     }
     .song-info {
         font-size: 0.8rem;
@@ -545,13 +565,13 @@ body {
         font-size: 0.7rem;
     }
     .lyrics-panel {
-        height: 2.4rem;
+        max-height: 4rem; /* Adjusted for smaller screens */
     }
     #lyrics-content p {
         font-size: 0.7rem;
     }
     .playlists h2, .songs h2, .queue h2 {
-        font-size: 0.75rem; /* Slightly reduced from 0.8rem */
+        font-size: 0.75rem;
     }
     .playlist-item {
         width: 6rem;
@@ -561,25 +581,25 @@ body {
         height: 5rem;
     }
     .playlist-item p {
-        font-size: 0.5rem; /* Slightly reduced from 0.55rem */
+        font-size: 0.5rem;
     }
     .song-item i, .queue-item i {
-        font-size: 1.1rem; /* Slightly reduced from 1.2rem */
-        padding: 0.45rem; /* Slightly reduced from 0.5rem */
+        font-size: 1.1rem;
+        padding: 0.45rem;
     }
     .song-item span, .queue-item span {
-        font-size: 0.65rem; /* Slightly reduced from 0.7rem */
-        width: 3.5rem; /* Slightly reduced from 4rem */
+        font-size: 0.65rem;
+        width: 3.5rem;
     }
-    .song-item m, .queue-item m {
-        font-size: 0.65rem; /* Slightly reduced from 0.7rem */
+    .song-item button, .queue-item button {
+        font-size: 0.65rem;
     }
     .botonmox a {
-        font-size: 1.1rem; /* Slightly reduced from 1.2rem */
+        font-size: 1.1rem;
     }
     .bottomlyrm {
-        font-size: 0.55rem; /* Slightly reduced from 0.6rem */
-        letter-spacing: 0.2rem; /* Slightly reduced from 0.25rem */
+        font-size: 0.55rem;
+        letter-spacing: 0.2rem;
         top: -45rem;
     }
 }
@@ -589,8 +609,11 @@ body {
         width: 96vw;
         height: 88vh;
     }
+    .nameboxm {
+        height: 9%; /* Adjusted for medium screens */
+    }
     .nmox1, .nmox2 {
-        font-size: 13vw; /* Slightly reduced from 14vw */
+        font-size: 13vw;
     }
     .moxybaul:hover .nmox1 {
         left: -45vw;
@@ -614,13 +637,13 @@ body {
         font-size: 0.8rem;
     }
     .lyrics-panel {
-        height: 2.6rem;
+        max-height: 5rem; /* Adjusted for medium screens */
     }
     #lyrics-content p {
         font-size: 0.8rem;
     }
     .playlists h2, .songs h2, .queue h2 {
-        font-size: 0.85rem; /* Slightly reduced from 0.9rem */
+        font-size: 0.85rem;
     }
     .playlist-item {
         width: 7rem;
@@ -630,14 +653,14 @@ body {
         height: 5.5rem;
     }
     .playlist-item p {
-        font-size: 0.55rem; /* Slightly reduced from 0.6rem */
+        font-size: 0.55rem;
     }
     .botonmox a {
-        font-size: 1.2rem; /* Slightly reduced from 1.3rem */
+        font-size: 1.2rem;
     }
     .bottomlyrm {
-        font-size: 0.6rem; /* Slightly reduced from 0.65rem */
-        letter-spacing: 0.3rem; /* Slightly reduced from 0.35rem */
+        font-size: 0.6rem;
+        letter-spacing: 0.3rem;
         top: -46rem;
     }
 }
@@ -646,6 +669,9 @@ body {
     .moxybaul {
         width: 95vw;
         height: 90vh;
+    }
+    .nameboxm {
+        height: 10%; /* Default height */
     }
     .nmox1, .nmox2 {
         font-size: 17vw;
@@ -666,7 +692,7 @@ body {
         font-size: 0.9rem;
     }
     .lyrics-panel {
-        height: 3rem;
+        max-height: 6rem; /* Default max height */
     }
     #lyrics-content p {
         font-size: 0.9rem;
